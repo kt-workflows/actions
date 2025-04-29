@@ -76,7 +76,7 @@ runs:
       id: release-branch
       shell: bash
       run: |
-        pr_number=${{ needs.release.outputs.pullRequestNumber }}
+        pr_number=${{ steps.changesets.outputs.pullRequestNumber }}
         pr_branch=$(gh pr view $pr_number --json headRefName --jq '.headRefName')
         echo "branch=$pr_branch" >> "$GITHUB_OUTPUT"
       env:
