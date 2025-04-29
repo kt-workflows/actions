@@ -1,0 +1,71 @@
+name: NPM Changesets Release
+description: Prepare and execute the changesets release action
+
+inputs:
+  app-id:
+    description: 'GitHub App ID used to create a token and submit changes'
+  private-key:
+    description: 'GitHub App private key used to create a token and submit changes'
+  npm-token:
+    description: 'NPM token used to publish the package'
+  matrix-node-version:
+    description: 'Node.js versions to use, json array like in matrix.node-version'
+  install-script:
+    description: 'Install script to run'
+    default: npm ci
+  build-script:
+    description: 'Script to run to build the package'
+    default: npm run build:release
+  publish-script:
+    description: 'Script to run to publish the package'
+    default: npm run changeset:publish
+  version-script:
+    description: 'Script to run to version the package'
+    default: npm run changeset:version
+
+runs:
+  using: 'composite'
+  steps:
+    - id: app-token
+      uses: kt-workflows/actions/create-github-app-token@main
+      with:
+        app-id: ${{ inputs.app-id }}
+        private-key: ${{ inputs.private-key }}
+        configure-git: false
+        default-to-github-token: true
+
+    - uses: actions/checkout@v4
+      with:
+        # This makes Actions fetch all Git history so that Changesets can generate changelogs with the correct commits
+        fetch-depth: 0
+        token: ${{ steps.app-token.outputs.token }}
+
+    - uses: kt-workflows/actions/npm-run-script@main
+      with:
+        matrix-node-version: ${{ inputs.matrix-node-version }}
+        matrix-node-version-earliest: true
+        install-script: ${{ inputs.install-script }}
+        run-script: ${{ inputs.build-script }}
+
+    - id: changesets
+      uses: changesets/action@v1
+      with:
+        #   # This expects you to have a script called release which does a build for your packages and calls changeset publish
+        publish: ${{ inputs.publish-script }}
+        version: ${{ inputs.version-script }}
+      env:
+        GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+        NPM_CONFIG_PROVENANCE: true
+        NPM_TOKEN: ${{ inputs.npm-token }}
+      continue-on-error: true
+
+    # Get the branch of the pull request from its number
+    - if: ${{ steps.changesets.outputs.publish != 'true' && steps.changesets.outputs.hasChangesets == 'true' && steps.changesets.outputs.pullRequestNumber != '' }}
+      id: pr-branch
+      shell: bash
+      run: |
+        pr_number=${{ needs.release.outputs.pullRequestNumber }}
+        pr_branch=$(gh pr view $pr_number --json headRefName --jq '.headRefName')
+        echo "branch=$pr_branch" >> "$GITHUB_OUTPUT"
+      env:
+        GH_TOKEN: ${{ steps.app-token.outputs.token }}

@@ -1,0 +1,97 @@
+name: Generate changesets for Dependabot PRs
+description: Add/update changeset files for Dependabot PR. This action is used in the context of a pull request created by Dependabot. It creates a changeset files in the `.changeset` directory.
+
+inputs:
+  token:
+    required: false
+    description: 'GitHub token'
+  updated-dependencies-json:
+    required: true
+    description: 'JSON string with updated dependencies from dependabot/fetch-metadata action'
+  version-update-map:
+    required: false
+    description: 'Map version updates from dependabot/fetch-metadata action to changeset types'
+    default: '{"semver-patch": "patch", "semver-minor": "patch", "semver-major": "patch"}'
+
+outputs:
+  updated-dependencies-json:
+    description: 'Json array of updated dependencies'
+    value: ${{ steps.metadata.outputs.updated-dependencies-json }}
+  changesets-json:
+    description: 'Json array of changeset files created or updated'
+    value: ${{ steps.generate-changesets.outputs.changesets-json }}
+
+runs:
+  using: 'composite'
+  steps:
+    - id: generate-changesets
+      if: steps.find-comment.outputs.comment-id == ''
+      shell: bash
+      run: |
+        declare changesets_json="[]"
+        # loop through updated-dependencies-json array
+        for dep in $(echo ${{ inputs.updated-dependencies-json }} | jq -r '.[] | @base64'); do
+          _jq() {
+            echo ${dep} | base64 --decode | jq -r ${1}
+          }
+          UPDATE_PKG_DIR=$(_jq '.directory')
+          UPDATE_PKG_DIR_PREP=$UPDATE_PKG_DIR
+          UPDATE_PKG_DIR_PREP=${UPDATE_PKG_DIR_PREP#./}
+          UPDATE_PKG_DIR_PREP=${UPDATE_PKG_DIR_PREP#/}
+          if [ -z "$UPDATE_PKG_DIR_PREP" ]; then
+            # if PKG_DIR is empty, set it to the current directory
+            UPDATE_PKG_DIR_PREP="."
+          fi
+          # Loop over the workspaces array, find matching workspace
+          # If not found, set PKG_DIR to the current directory
+          # This is to support monorepos with workspaces
+          # and to support packages that are not in a workspace
+          FOUND_PKG_DIR="."
+          # check that UPDATE_PKG_DIR_PREP != "."
+          if [[ "$UPDATE_PKG_DIR_PREP" != "." ]]; then
+            for workspace in $(jq -r '.workspaces[]' ./package.json); do
+              # Check if the workspace matches the UPDATE_PKG_DIR
+              if [[ "$UPDATE_PKG_DIR_PREP" == "$workspace" || "./$UPDATE_PKG_DIR_PREP" == "$workspace" ]]; then
+                # If it matches, set FOUND_PKG_DIR to the workspace
+                FOUND_PKG_DIR=$workspace
+                break
+              fi
+            done
+          fi
+          PKG_DIR=$FOUND_PKG_DIR
+          PKG_JSON="$PKG_DIR/package.json"
+          PKG_NAME=$(jq -r '.name' $PKG_JSON)
+          DEP_NAME=$(_jq '.dependencyName')
+          DEP_PREV_VERSION=$(_jq '.prevVersion')
+          DEP_NEW_VERSION=$(_jq '.newVersion')
+          DEP_DEPENDENCY_TYPE=$(_jq '.dependencyType')
+          DEP_UPDATE_TYPE=$(_jq '.updateType') 
+          DEP_SEMVER_TYPE=$(echo $DEP_UPDATE_TYPE | cut -d':' -f2)
+          DEP_CHANGESET_TYPE=$(echo ${{ tojson(inputs.version-update-map) }} | jq -r --arg semver_type "$DEP_SEMVER_TYPE" '.[$semver_type]')
+          # replace / with - in DEP_NAME
+          DEP_NAME_CHANGESET=${DEP_NAME//\//-}
+          if [ "$PKG_DIR" = "." ]; then
+            CHANGESET_FILE="${{ github.event.number }}-${PKG_NAME}-${DEP_NAME_CHANGESET}.md"
+          else
+            CHANGESET_FILE="${{ github.event.number }}-${PKG_DIR}-${PKG_NAME}-${DEP_NAME_CHANGESET}.md"
+          fi
+          # replace '/' with
+          CHANGESET_FILE=${CHANGESET_FILE//\//-}
+          # add ./.changeset/ prefix
+          CHANGESET_FILE="./.changeset/$CHANGESET_FILE"
+          # Always overwrite changeset file in the beginning - '>' will create the file if it doesn't exist
+          echo "---" > $CHANGESET_FILE
+          echo "'$PKG_NAME': $DEP_CHANGESET_TYPE" >> $CHANGESET_FILE
+          echo "---" >> $CHANGESET_FILE
+          echo "" >> $CHANGESET_FILE
+          if [ -n "$DEP_PREV_VERSION" ] && [ -n "$DEP_NEW_VERSION" ]; then
+            UPDATE_STRING="dependabot: directory '$UPDATE_PKG_DIR', update $DEP_NAME from $DEP_PREV_VERSION to $DEP_NEW_VERSION"
+          else
+            UPDATE_STRING="dependabot: directory '$UPDATE_PKG_DIR', update $DEP_NAME"
+          fi
+          echo "$UPDATE_STRING" >> $CHANGESET_FILE
+          # append output - json array of created or updated changeset files
+          changesets_json=$(echo $changesets_json | jq --arg file $CHANGESET_FILE '. + [$file]')
+        done
+        changesets_json=$(echo $changesets_json | jq -c '.')
+        echo "changesets-json=$changesets_json" >> $GITHUB_OUTPUT

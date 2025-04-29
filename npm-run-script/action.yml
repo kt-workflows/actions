@@ -1,0 +1,73 @@
+name: 'Prepare and run scripts in Node.js environment'
+description: 'Setup Node.js environment and run scripts. Uses caches for node and npm_modules.'
+author: 'GitHub'
+inputs:
+  node-version:
+    description: 'Concrete Node.js version to use'
+  matrix-node-version:
+    description: 'Version Spec array, i.e. from matrix.node-version. Latest will be selected from this array and setup-node will be run with the selected version.'
+  matrix-node-version-earliest:
+    description: 'Set this option if you want the action to select for the earliest available version that satisfies the version spec.'
+    default: 'false'
+  install-script:
+    description: 'Bash script to run after setting up Node.js.'
+    default: 'npm ci'
+  run-script:
+    description: 'Bash script to run after setting up Node.js.'
+  cache-additional-path:
+    description: 'Additional paths to cache. This is a multi-line list of paths.'
+  cache-reset:
+    description: 'Delete the cache if it exists to cache the new one.'
+    default: 'false'
+  working-directory:
+    description: 'The working directory which contains the **/package-lock.json files'
+    default: '.'
+
+runs:
+  using: composite
+  steps:
+    - id: setup-node
+      uses: kt-workflows/actions/setup-node-minmax@main
+      with:
+        node-version: ${{ inputs.node-version }}
+        matrix-node-version: ${{ inputs.matrix-node-version }}
+        matrix-node-version-earliest: ${{ inputs.matrix-node-version-earliest }}
+        cache: npm
+        cache-dependency-path: ./**/package-lock.json
+
+    - id: cache-key
+      uses: kt-workflows/actions/npm-run-script-cache-key@main
+      with:
+        node-version: ${{ steps.setup-node.outputs.node-version }}
+        working-directory: ${{ inputs.working-directory }}
+
+    - if: ${{ inputs.cache-reset == 'true' }}
+      uses: kt-workflows/actions/npm-run-script-cache-delete@main
+      with:
+        node-version: ${{ steps.setup-node.outputs.node-version }}
+        working-directory: ${{ inputs.working-directory }}
+      continue-on-error: true
+
+    - id: npm-cache
+      uses: actions/cache@v4
+      with:
+        path: |
+          ${{ inputs.working-directory }}/**/node_modules
+          ${{ inputs.cache-additional-path }}
+        key: ${{ steps.cache-key.outputs.key }}
+
+    - id: install-script
+      if: ${{ inputs.install-script != '' && (steps.npm-cache.outputs.cache-hit != 'true' || inputs.cache-reset == 'true') }}
+      shell: bash
+      run: |
+        echo "Running install script..."
+        eval "${{ inputs.install-script }}"
+      working-directory: ${{ inputs.working-directory }}
+
+    - id: run-script
+      if: ${{ inputs.run-script != '' }}
+      shell: bash
+      run: |
+        echo "Running script..."
+        eval "${{ inputs.run-script }}"
+      working-directory: ${{ inputs.working-directory }}

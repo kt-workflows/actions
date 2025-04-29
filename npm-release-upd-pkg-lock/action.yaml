@@ -1,0 +1,67 @@
+name: NPM Changesets Release Update
+description: Update package-lock.json after the changesets action (e.g. version of the package)
+
+inputs:
+  app-id:
+    description: 'GitHub App ID used to create a token and submit changes'
+  private-key:
+    description: 'GitHub App private key used to create a token and submit changes'
+  pr-branch:
+    description: 'Branch name of the PR to update'
+
+runs:
+  using: 'composite'
+  steps:
+    - id: app-token
+      uses: kt-workflows/actions/create-github-app-token@main
+      with:
+        app-id: ${{ inputs.app-id }}
+        private-key: ${{ inputs.private-key }}
+        configure-git: true
+
+    # Checkout the branch of the pull request
+    - uses: actions/checkout@v4
+      with:
+        ref: ${{ inputs.pr-branch }}
+        token: ${{ steps.app-token.outputs.token }}
+
+    # get versions from package.json and package-lock.json
+    - id: versions
+      run: |
+        echo "pkg_version=$(jq -r .version package.json)" >> "$GITHUB_OUTPUT"
+        echo "pkg_lock_version=$(jq -r .version package-lock.json)" >> "$GITHUB_OUTPUT"
+      shell: bash
+
+    # Update package-lock.json if required
+    - id: update-package-lock
+      if: ${{ steps.versions.outputs.pkg_version != steps.versions.outputs.pkg_lock_version }}
+      shell: bash
+      run: |
+        # Update package-lock.json.version = steps.versions.outputs.pkg_version
+        # Update package-lock.json.packages[""].version = steps.versions.outputs.pkg_version
+        jq --arg version "${{ steps.versions.outputs.pkg_version }}" '.version = $version | .packages[""].version = $version' package-lock.json > package-lock.json.tmp
+        # Check if the jq command was successful, only two lines were modified and they must be as '"version": "$version"'
+        if [ "$(jq -r '.version' package-lock.json.tmp)" != "${{ steps.versions.outputs.pkg_version }}" ]; then
+          echo "Error: jq command failed to update version in package-lock.json"
+          exit 1
+        fi
+        # Check if the jq command was successful, only two lines were modified and they must be as '"version": "$version"'
+        if [ "$(jq -r '.packages[""].version' package-lock.json.tmp)" != "${{ steps.versions.outputs.pkg_version }}" ]; then
+          echo "Error: jq command failed to update version in package-lock.json"
+          exit 1
+        fi
+        mv package-lock.json.tmp package-lock.json
+
+    # Commit and push the changes to the pull request branch
+    - run: |
+        # Check if there are any changes to commit in 'package-lock.json' file
+        if [ -z "$(git status --porcelain)" ]; then
+          echo "No changes to commit"
+        else
+          git add package-lock.json
+          git commit -m "Update version in package-lock.json"
+          git push
+        fi
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}

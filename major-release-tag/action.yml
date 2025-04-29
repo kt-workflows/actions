@@ -1,0 +1,40 @@
+name: Create GitHub App Token
+description: GitHub Action for creating a GitHub App installation access token. Configures git user name and email for the app.
+
+inputs:
+  app-id:
+    description: GitHub App ID
+  private-key:
+    description: GitHub App private key. Escaped newlines (\\n) will be automatically replaced with actual newlines.
+runs:
+  using: 'composite'
+  steps:
+    - id: app-token
+      if: ${{ inputs.app-id != '' && inputs.private-key != '' }}
+      uses: kt-workflows/actions/create-github-app-token@main
+      with:
+        app-id: ${{ inputs.app-id }}
+        private-key: ${{ inputs.private-key }}
+        configure-git: true
+
+    - uses: actions/checkout@v4
+      with:
+        token: ${{ steps.app-token.outputs.token || github.token }}
+
+    # Configure git user name and email for the app if app-id and private-key were not provided
+    - id: configure-git
+      if: ${{ steps.app-token.outputs.token == ''}}
+      shell: bash
+      run: |
+        git config --global user.name "github-actions[bot]"
+        git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+    - name: Get major version num and update tag
+      shell: bash
+      run: |
+        VERSION=${GITHUB_REF#refs/tags/}
+        echo "Version: ${VERSION}"
+        MAJOR=${VERSION%%.*}
+        echo "Major version: ${MAJOR}"
+        git tag -fa "${MAJOR}" -m 'Update major version tag'
+        git push origin "${MAJOR}" --force

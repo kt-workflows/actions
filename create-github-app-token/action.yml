@@ -1,0 +1,85 @@
+name: Create GitHub App Token
+description: GitHub Action for creating a GitHub App installation access token. Configures git user name and email for the app.
+
+inputs:
+  app-id:
+    description: GitHub App ID
+    required: false
+  private-key:
+    description: GitHub App private key. Escaped newlines (\\n) will be automatically replaced with actual newlines.
+    required: false
+  configure-git:
+    description: Configure git user name and email for the app
+    required: false
+    default: 'true'
+  default-to-github-token:
+    description: Use github.token as default token, if app-id or private-key are not provided
+    required: false
+    default: 'true'
+outputs:
+  token:
+    description: GitHub installation access token
+    value: ${{ steps.app-token.outputs.token }}
+  installation-id:
+    description: GitHub App installation ID
+    value: ${{ steps.app-token.outputs.installation-id }}
+  app-slug:
+    description: GitHub App slug
+    value: ${{ steps.app-token.outputs.app-slug }}
+  user-id:
+    description: GitHub App user ID
+    value: ${{ steps.get-user-id.outputs.user-id }}
+  user-name:
+    description: GitHub App user name
+    value: ${{ steps.get-user-name.outputs.user-name }}
+  user-email:
+    description: GitHub App user email
+    value: ${{ steps.get-user-email.outputs.user-email }}
+runs:
+  using: 'composite'
+  steps:
+    - id: generate-app-token
+      if: ${{ inputs.app-id != '' && inputs.private-key != '' || inputs.default-to-github-token == 'false' }}
+      uses: actions/create-github-app-token@v1
+      with:
+        app-id: ${{ inputs.app-id }}
+        private-key: ${{ inputs.private-key }}
+
+    - id: app-token
+      # Check that generate-app-token step has non-empty outputs otherwise use github.token
+      run: |
+        if [ -n "${{ steps.generate-app-token.outputs.token }}" ]; then
+          echo "Using generated app token"
+          echo "token=${{ steps.generate-app-token.outputs.token }}" >> "$GITHUB_OUTPUT"
+          echo "installation-id=${{ steps.generate-app-token.outputs.installation-id }}" >> "$GITHUB_OUTPUT"
+          echo "app-slug=${{ steps.generate-app-token.outputs.app-slug }}" >> "$GITHUB_OUTPUT"
+        else
+          echo "Using github.token as default token"
+          echo "token=${{ github.token }}" >> "$GITHUB_OUTPUT"
+          echo "installation-id=''" >> "$GITHUB_OUTPUT"
+          echo "app-slug=github-actions" >> "$GITHUB_OUTPUT"
+        fi
+      shell: bash
+
+    - id: get-user-id
+      shell: bash
+      run: echo "user-id=$(gh api "/users/${{ steps.app-token.outputs.app-slug }}[bot]" --jq .id)" >> "$GITHUB_OUTPUT"
+      env:
+        GH_TOKEN: ${{ steps.app-token.outputs.token }}
+
+    - id: get-user-name
+      shell: bash
+      run: echo "user-name=${{ steps.app-token.outputs.app-slug }}[bot]" >> "$GITHUB_OUTPUT"
+
+    - id: get-user-email
+      shell: bash
+      run: echo "user-email=${{ steps.get-user-id.outputs.user-id }}+${{ steps.app-token.outputs.app-slug }}[bot]@users.noreply.github.com" >> "$GITHUB_OUTPUT"
+
+    - id: configure-git
+      if: ${{ inputs.configure-git == 'true' }}
+      shell: bash
+      run: |
+        git config --global user.name '${{ steps.get-user-name.outputs.user-name }}'
+        git config --global user.email '${{ steps.get-user-email.outputs.user-email }}'
+      env:
+        GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}

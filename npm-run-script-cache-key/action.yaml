@@ -1,0 +1,25 @@
+name: NPM dependencies cache key
+description: Generate cache key for the npm-run-script action, under which dependencies (e.g. node_modules and additional paths) are stored.
+
+inputs:
+  node-version:
+    description: The Node.js version used in the workflow
+    required: true
+  working-directory:
+    description: The working directory which contains the '**/package-lock.json' files
+    default: '.'
+
+outputs:
+  key:
+    description: The generated cache key
+    value: ${{ steps.cache-key.outputs.key }}
+
+runs:
+  using: 'composite'
+  steps:
+    - id: cache-key
+      run: echo "key=node-cache-dependencies-${{ runner.os }}-${{ runner.arch }}-node-${{ inputs.node-version }}-${{ hashFiles(format('{0}/**/package-lock.json', inputs.working-directory)) }}" >> $GITHUB_OUTPUT
+      shell: bash
+
+    - run: 'echo "Generated cache key: ${{ steps.cache-key.outputs.key }}"'
+      shell: bash

@@ -1,0 +1,35 @@
+name: Delete NPM dependencies cache
+description: Delete cache for the npm-run-script action, under which dependencies (e.g. node_modules and additional paths) are stored.
+
+inputs:
+  node-version:
+    description: The Node.js version used in the workflow
+    required: true
+  working-directory:
+    description: The working directory which contains the '**/package-lock.json' files
+    default: '.'
+  github-token:
+    description: The GitHub token to use for authentication
+    default: ${{ github.token }}
+
+outputs:
+  key:
+    description: The generated cache key
+    value: ${{ steps.cache-key.outputs.key }}
+
+runs:
+  using: 'composite'
+  steps:
+    - id: cache-key
+      uses: kt-workflows/actions/npm-run-script-cache-key@main
+      with:
+        node-version: ${{ inputs.node-version }}
+        working-directory: ${{ inputs.working-directory }}
+
+    - continue-on-error: true
+      shell: bash
+      run: |
+        gh extension install actions/gh-actions-cache
+        gh actions-cache delete "${{ steps.cache-key.outputs.key }}" --confirm
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
