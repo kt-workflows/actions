@@ -81,28 +81,3 @@ runs:
         echo "branch=$pr_branch" >> "$GITHUB_OUTPUT"
       env:
         GH_TOKEN: ${{ steps.app-token.outputs.token }}
-
-    # Update package-lock.json if required, do it in a temporary directory, because otherwise there is an issue with the authorization
-    # Generate temporary directory name
-    - id: temp-dir
-      if: ${{ steps.release-branch.outputs.branch != '' }}
-      shell: bash
-      run: |
-        # Generate a random string of 8 characters
-        temp_dir=$(echo "release-brunch-$(openssl rand -hex 4)")
-        # Check that we have the name otherwise fail
-        if [ -z "$temp_dir" ]; then
-          echo "Error: Failed to generate temporary directory name"
-          exit 1
-        fi
-        echo "temp_dir=$temp_dir" >> "$GITHUB_OUTPUT"
-
-    # update package-lock.json if required and commit changes
-    - uses: kt-workflows/actions/npm-release-upd-pkg-lock@main
-      if: ${{ steps.release-branch.outputs.branch != '' }}
-      with:
-        release-branch: ${{ steps.release-branch.outputs.branch }}
-        working-directory: ${{ steps.temp-dir.outputs.temp_dir }}
-        github-token: ${{ steps.app-token.outputs.token }}
-        user-name: ${{ steps.app-token.outputs.user-name }}
-        user-email: ${{ steps.app-token.outputs.user-email }}
