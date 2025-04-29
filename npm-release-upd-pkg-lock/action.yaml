@@ -10,6 +10,12 @@ inputs:
   github-token:
     description: 'GitHub token to use'
     required: true
+  user-name:
+    description: 'GitHub user name to use for the commit'
+    required: true
+  user-email:
+    description: 'GitHub user email to use for the commit'
+    required: true
 
 runs:
   using: 'composite'
@@ -20,6 +26,14 @@ runs:
         ref: ${{ inputs.release-branch }}
         token: ${{ inputs.github-token }}
         path: ${{ inputs.working-directory }}
+
+    - run: |
+        git config --global user.name "${{ inputs.user-name }}"
+        git config --global user.email "${{ inputs.user-email }}"
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        GITHUB_TOKEN: ${{ inputs.github-token }}
 
     # get versions from package.json and package-lock.json
     - id: versions

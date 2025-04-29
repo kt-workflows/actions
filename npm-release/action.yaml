@@ -104,3 +104,5 @@ runs:
         release-branch: ${{ steps.release-branch.outputs.branch }}
         working-directory: ${{ steps.temp-dir.outputs.temp_dir }}
         github-token: ${{ steps.app-token.outputs.token }}
+        user-name: ${{ steps.app-token.outputs.user-name }}
+        user-email: ${{ steps.app-token.outputs.user-email }}
