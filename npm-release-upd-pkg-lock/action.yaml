@@ -51,7 +51,7 @@ runs:
       run: |
         # Update package-lock.json.version = steps.versions.outputs.pkg_version
         # Update package-lock.json.packages[""].version = steps.versions.outputs.pkg_version
-        jq --arg version "${{ steps.versions.outputs.pkg_version }}" '.version = $version | .packages[""].version = $version' package-lock.json > package-lock.json.tmp
+        jq --tab --arg version "${{ steps.versions.outputs.pkg_version }}" '.version = $version | .packages[""].version = $version' package-lock.json > package-lock.json.tmp
         # Check if the jq command was successful, only two lines were modified and they must be as '"version": "$version"'
         if [ "$(jq -r '.version' package-lock.json.tmp)" != "${{ steps.versions.outputs.pkg_version }}" ]; then
           echo "Error: jq command failed to update version in package-lock.json"
