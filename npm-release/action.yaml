@@ -22,6 +22,16 @@ inputs:
   version-script:
     description: 'Script to run to version the package'
     default: npm run changeset:version
+  cache-additional-path:
+    description: 'Additional paths to cache. This is a multi-line list of paths.'
+  cache-reset:
+    description: 'Delete the cache if it exists to cache the new one.'
+    default: 'false'
+
+outputs:
+  release-branch:
+    description: 'Branch name of the Changesets release PR'
+    value: ${{ steps.release-branch.outputs.branch }}
 
 runs:
   using: 'composite'
@@ -46,6 +56,8 @@ runs:
         matrix-node-version-earliest: true
         install-script: ${{ inputs.install-script }}
         run-script: ${{ inputs.build-script }}
+        cache-additional-path: ${{ inputs.cache-additional-path }}
+        cache-reset: ${{ inputs.cache-reset }}
 
     - id: changesets
       uses: changesets/action@v1
@@ -61,7 +73,7 @@ runs:
 
     # Get the branch of the pull request from its number
     - if: ${{ steps.changesets.outputs.publish != 'true' && steps.changesets.outputs.hasChangesets == 'true' && steps.changesets.outputs.pullRequestNumber != '' }}
-      id: pr-branch
+      id: release-branch
       shell: bash
       run: |
         pr_number=${{ needs.release.outputs.pullRequestNumber }}
@@ -69,3 +81,26 @@ runs:
         echo "branch=$pr_branch" >> "$GITHUB_OUTPUT"
       env:
         GH_TOKEN: ${{ steps.app-token.outputs.token }}
+
+    # Update package-lock.json if required, do it in a temporary directory, because otherwise there is an issue with the authorization
+    # Generate temporary directory name
+    - id: temp-dir
+      if: ${{ steps.release-branch.outputs.branch != '' }}
+      shell: bash
+      run: |
+        # Generate a random string of 8 characters
+        temp_dir=$(echo "release-brunch-$(openssl rand -hex 4)")
+        # Check that we have the name otherwise fail
+        if [ -z "$temp_dir" ]; then
+          echo "Error: Failed to generate temporary directory name"
+          exit 1
+        fi
+        echo "temp_dir=$temp_dir" >> "$GITHUB_OUTPUT"
+
+    # update package-lock.json if required and commit changes
+    - uses: kt-workflows/actions/npm-release-upd-pkg-lock@main
+      if: ${{ steps.release-branch.outputs.branch != '' }}
+      with:
+        release-branch: ${{ steps.release-branch.outputs.branch }}
+        working-directory: ${{ steps.temp-dir.outputs.temp_dir }}
+        github-token: ${{ steps.app-token.outputs.token }}

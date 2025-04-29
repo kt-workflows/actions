@@ -1,32 +1,29 @@
 name: NPM Changesets Release Update
-description: Update package-lock.json after the changesets action (e.g. version of the package)
+description: Update package-lock.json after the changesets action (e.g. version of the package) commit changes
 
 inputs:
-  app-id:
-    description: 'GitHub App ID used to create a token and submit changes'
-  private-key:
-    description: 'GitHub App private key used to create a token and submit changes'
-  pr-branch:
+  release-branch:
     description: 'Branch name of the PR to update'
+  working-directory:
+    description: 'Working directory to run the action in'
+    default: '.'
+  github-token:
+    description: 'GitHub token to use'
+    required: true
 
 runs:
   using: 'composite'
   steps:
-    - id: app-token
-      uses: kt-workflows/actions/create-github-app-token@main
-      with:
-        app-id: ${{ inputs.app-id }}
-        private-key: ${{ inputs.private-key }}
-        configure-git: true
-
     # Checkout the branch of the pull request
     - uses: actions/checkout@v4
       with:
-        ref: ${{ inputs.pr-branch }}
+        ref: ${{ inputs.release-branch }}
         token: ${{ steps.app-token.outputs.token }}
+        path: ${{ inputs.working-directory }}
 
     # get versions from package.json and package-lock.json
     - id: versions
+      working-directory: ${{ inputs.working-directory }}
       run: |
         echo "pkg_version=$(jq -r .version package.json)" >> "$GITHUB_OUTPUT"
         echo "pkg_lock_version=$(jq -r .version package-lock.json)" >> "$GITHUB_OUTPUT"
@@ -36,6 +33,7 @@ runs:
     - id: update-package-lock
       if: ${{ steps.versions.outputs.pkg_version != steps.versions.outputs.pkg_lock_version }}
       shell: bash
+      working-directory: ${{ inputs.working-directory }}
       run: |
         # Update package-lock.json.version = steps.versions.outputs.pkg_version
         # Update package-lock.json.packages[""].version = steps.versions.outputs.pkg_version
@@ -63,5 +61,6 @@ runs:
           git push
         fi
       shell: bash
+      working-directory: ${{ inputs.working-directory }}
       env:
         GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
