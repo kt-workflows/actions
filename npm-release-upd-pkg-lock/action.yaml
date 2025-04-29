@@ -21,7 +21,7 @@ runs:
       with:
         app-id: ${{ inputs.app-id }}
         private-key: ${{ inputs.private-key }}
-        configure-git: false
+        configure-git: true
         default-to-github-token: true
 
     - uses: actions/checkout@v4
