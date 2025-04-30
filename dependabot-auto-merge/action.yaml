@@ -6,6 +6,9 @@ inputs:
     description: 'GitHub App ID used to create a token and submit changes'
   private-key:
     description: 'GitHub App private key used to create a token and submit changes'
+  generate-changesets:
+    description: 'Generate changesets for the updated dependencies'
+    default: 'true'
 
 outputs:
   updated-dependencies-json:
@@ -43,6 +46,7 @@ runs:
         token: ${{ steps.app-token.outputs.token }}
 
     - uses: kt-workflows/actions/dependabot-generate-changesets@main
+      if: ${{ inputs.generate-changesets == 'true' }}
       with:
         updated-dependencies-json: ${{ tojson(steps.metadata.outputs.updated-dependencies-json) }}
 
@@ -56,6 +60,7 @@ runs:
           git push
         fi
       shell: bash
+      if: ${{ inputs.generate-changesets == 'true' }}
       env:
         GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
 
