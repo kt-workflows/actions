@@ -100,8 +100,6 @@ runs:
         steps.check-pr.outputs.pr_number != ''
       shell: bash
       run: |
-        echo "I would enable auto-merge for PR #${{ steps.check-pr.outputs.pr_number }}, this is a dry run"
-        exit 0
         pr_number=${{ steps.check-pr.outputs.pr_number }}
         echo "Merging PR #$pr_number"
         gh pr merge $pr_number --auto --squash --delete-branch
