@@ -37,7 +37,7 @@ runs:
           INSTALL_SCRIPT_HASH="${{ steps.install-script-hash.outputs.digest }}"
         fi
 
-        echo "key=node-cache-dependencies-${{ runner.os }}-${{ runner.arch }}-node-${{ inputs.node-version }}-${{ hashFiles(format('{0}/**/package-lock.json', inputs.working-directory)) }}-$INSTALL_SCRIPT_HASH" >> $GITHUB_ENV
+        echo "key=node-cache-dependencies-${{ runner.os }}-${{ runner.arch }}-node-${{ inputs.node-version }}-${{ hashFiles(format('{0}/**/package-lock.json', inputs.working-directory)) }}-$INSTALL_SCRIPT_HASH" >> "$GITHUB_OUTPUT"
       shell: bash
 
     - run: 'echo "Generated cache key: ${{ steps.cache-key.outputs.key }}"'
