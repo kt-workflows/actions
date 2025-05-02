@@ -5,11 +5,11 @@ inputs:
   node-version:
     description: The Node.js version used in the workflow
     required: true
+  install-script:
+    description: The install script used in the workflow
   working-directory:
     description: The working directory which contains the '**/package-lock.json' files
     default: '.'
-  install-script:
-    description: The install script used in the workflow
   github-token:
     description: The GitHub token to use for authentication
     default: ${{ github.token }}
@@ -26,6 +26,7 @@ runs:
       uses: kt-workflows/actions/npm-run-script-cache-key@main
       with:
         node-version: ${{ inputs.node-version }}
+        install-script: ${{ inputs.install-script }}
         working-directory: ${{ inputs.working-directory }}
 
     - continue-on-error: true
