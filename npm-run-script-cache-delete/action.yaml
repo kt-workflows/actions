@@ -8,6 +8,8 @@ inputs:
   working-directory:
     description: The working directory which contains the '**/package-lock.json' files
     default: '.'
+  install-script:
+    description: The install script used in the workflow
   github-token:
     description: The GitHub token to use for authentication
     default: ${{ github.token }}

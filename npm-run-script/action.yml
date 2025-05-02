@@ -46,6 +46,7 @@ runs:
       uses: kt-workflows/actions/npm-run-script-cache-delete@main
       with:
         node-version: ${{ steps.setup-node.outputs.node-version }}
+        install-script: ${{ inputs.install-script }}
         working-directory: ${{ inputs.working-directory }}
       continue-on-error: true
 

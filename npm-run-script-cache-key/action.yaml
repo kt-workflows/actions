@@ -28,7 +28,7 @@ runs:
 
     - id: cache-key
       run: |
-        # Check that the 'instll-script-hash' has the return value, if not, set intermediate value to 'no-install-script-hash'
+        # Check that the 'install-script-hash' has the return value, if not, set intermediate value to 'no-install-script-hash'
         if [ -z "${{ steps.install-script-hash.outputs.digest }}" ]; then
           echo "install-script-hash.outputs.digest is empty, setting INSTALL_SCRIPT_HASH value to 'no-install-script-hash'"
           INSTALL_SCRIPT_HASH="no-install-script-hash"
