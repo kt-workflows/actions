@@ -14,6 +14,9 @@ inputs:
     default: 'npm ci'
   run-script:
     description: 'Bash script to run after setting up Node.js.'
+  no-cache:
+    description: 'Skip caching of node_modules.'
+    default: 'false'
   cache-additional-path:
     description: 'Additional paths to cache. This is a multi-line list of paths.'
   cache-reset:
@@ -36,13 +39,14 @@ runs:
         cache-dependency-path: ./**/package-lock.json
 
     - id: cache-key
+      if: ${{ inputs.no-cache != 'true' }}
       uses: kt-workflows/actions/npm-run-script-cache-key@main
       with:
         node-version: ${{ steps.setup-node.outputs.node-version }}
         install-script: ${{ inputs.install-script }}
         working-directory: ${{ inputs.working-directory }}
 
-    - if: ${{ inputs.cache-reset == 'true' }}
+    - if: ${{ inputs.cache-reset == 'true' && inputs.no-cache != 'true' }}
       uses: kt-workflows/actions/npm-run-script-cache-delete@main
       with:
         node-version: ${{ steps.setup-node.outputs.node-version }}
@@ -51,6 +55,7 @@ runs:
       continue-on-error: true
 
     - id: npm-cache
+      if: ${{ inputs.no-cache != 'true' }}
       uses: actions/cache@v4
       with:
         path: |
