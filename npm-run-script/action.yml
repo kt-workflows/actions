@@ -62,7 +62,7 @@ runs:
       uses: actions/cache@v4
       with:
         path: |
-          ${{ inputs.working-directory }}/**/node_modules
+          **/node_modules
           ${{ inputs.cache-additional-path }}
         key: ${{ steps.cache-key.outputs.key }}
 
