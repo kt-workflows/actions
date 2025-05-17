@@ -1,32 +1,31 @@
-name: NPM CI Check
-description: NPM Continuous Integration check action
+name: NPM CI Test
+description: NPM Continuous Integration test action
 
 inputs:
   node-version:
     description: 'Version Spec to use. Examples: 18, 18.x, 18.0.0, 18.0.x, 18.0.0-x, 18.0.0-x64.'
     required: false
-  matrix-node-version:
-    description: 'Version Spec array, i.e. from matrix.node-version. Latest will be selected from this array and setup-node will be run with the selected version.'
-    required: false
-  matrix-node-version-earliest:
-    description: 'Set this option if you want the action to select for the earliest available version that satisfies the version spec.'
-    default: 'false'
   install-script:
     description: 'Bash script to run after setting up Node.js.'
     default: 'npm ci'
-  run-script:
+  build-script:
     description: 'Bash script to run after setting up Node.js.'
-    default: |
-      npm run check
-      npm run lint
-  no-cache:
-    description: 'Skip caching of node_modules.'
-    default: 'false'
+    default: npm run build
+  start-script:
+    description: 'Bash script to run by Cypress action for testing after setting up Node.js.'
+    default: npm run preview
+  wait-on:
+    description: 'Wait for the server to be ready'
+    default: http://localhost:5173
   cache-additional-path:
     description: 'Additional paths to cache. This is a multi-line list of paths.'
+    default: '/home/runner/.cache/Cypress'
   cache-reset:
     description: 'Delete the cache if it exists to cache the new one.'
     default: 'false'
+  cache-dependency-path:
+    description: 'Used to specify the path to a dependency file: package-lock.json, yarn.lock, etc. Supports wildcards or a list of file names for caching multiple dependencies.'
+    default: '**/package-lock.json,**/yarn.lock,**/pnpm-lock.yaml'
   working-directory:
     description: 'The working directory which contains the **/package-lock.json files'
     default: '.'
@@ -36,14 +35,20 @@ runs:
   steps:
     - uses: actions/checkout@v4
 
+    # Just install the dependencies
+    # build will be done by the cypress action
     - uses: kt-workflows/actions/npm-run-script@main
       with:
         node-version: ${{ inputs.node-version }}
-        matrix-node-version: ${{ inputs.matrix-node-version }}
-        matrix-node-version-earliest: ${{ inputs.matrix-node-version-earliest }}
         install-script: ${{ inputs.install-script }}
-        run-script: ${{ inputs.run-script }}
-        no-cache: ${{ inputs.no-cache }}
         cache-additional-path: ${{ inputs.cache-additional-path }}
         cache-reset: ${{ inputs.cache-reset }}
+        cache-dependency-path: ${{ inputs.cache-dependency-path }}
+        working-directory: ${{ inputs.working-directory }}
+
+    - uses: cypress-io/github-action@v6
+      with:
+        build: ${{ inputs.build-script }}
+        start: ${{ inputs.start-script }}
+        wait-on: ${{ inputs.wait-on }}
         working-directory: ${{ inputs.working-directory }}

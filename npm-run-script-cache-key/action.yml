@@ -7,9 +7,9 @@ inputs:
     required: true
   install-script:
     description: The install script used in the workflow
-  working-directory:
-    description: The working directory which contains the '**/package-lock.json' files
-    default: '.'
+  cache-dependency-path:
+    description: 'Used to specify the path to a dependency file: package-lock.json, yarn.lock, etc. Supports wildcards or a list of file names for caching multiple dependencies.'
+    default: '**/package-lock.json,**/yarn.lock,**/pnpm-lock.yaml'
 
 outputs:
   key:
@@ -37,7 +37,7 @@ runs:
           INSTALL_SCRIPT_HASH="${{ steps.install-script-hash.outputs.digest }}"
         fi
 
-        echo "key=node-cache-dependencies-${{ runner.os }}-${{ runner.arch }}-node-${{ inputs.node-version }}-${{ hashFiles(format('{0}/**/package-lock.json', inputs.working-directory)) }}-$INSTALL_SCRIPT_HASH" >> "$GITHUB_OUTPUT"
+        echo "key=node-cache-dependencies-${{ runner.os }}-${{ runner.arch }}-node-${{ inputs.node-version }}-${{ hashFiles(inputs.cache-dependency-path) }}-$INSTALL_SCRIPT_HASH" >> "$GITHUB_OUTPUT"
       shell: bash
 
     - run: 'echo "Generated cache key: ${{ steps.cache-key.outputs.key }}"'
