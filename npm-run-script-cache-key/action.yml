@@ -33,14 +33,14 @@ runs:
       run: |
         # Check that the 'calculate-hash' has the return value, if not, set intermediate value to 'no-calculate-hash-value'
         if [ -z "${{ steps.calculate-hash.outputs.digest }}" ]; then
-          echo "calculate-hash.outputs.digest is empty, setting INSTALL_SCRIPT_HASH value to 'no-calculate-hash-value'"
-          INSTALL_SCRIPT_HASH="no-calculate-hash-value"
+          echo "calculate-hash.outputs.digest is empty, setting CALCULATED_HASH value to 'no-calculate-hash-value'"
+          CALCULATED_HASH="no-calculate-hash-value"
         else
-          echo "calculate-hash.outputs.digest is not empty, setting INSTALL_SCRIPT_HASH value to '${{ steps.calculate-hash.outputs.digest }}'"
-          INSTALL_SCRIPT_HASH="${{ steps.calculate-hash.outputs.digest }}"
+          echo "calculate-hash.outputs.digest is not empty, setting CALCULATED_HASH value to '${{ steps.calculate-hash.outputs.digest }}'"
+          CALCULATED_HASH="${{ steps.calculate-hash.outputs.digest }}"
         fi
 
-        echo "key=node-cache-dependencies-${{ runner.os }}-${{ runner.arch }}-node-${{ inputs.node-version }}-${{ hashFiles(inputs.cache-dependency-path) }}-$INSTALL_SCRIPT_HASH" >> "$GITHUB_OUTPUT"
+        echo "key=node-cache-dependencies-${{ runner.os }}-${{ runner.arch }}-node-${{ inputs.node-version }}-${{ hashFiles(inputs.cache-dependency-path) }}-$CALCULATED_HASH" >> "$GITHUB_OUTPUT"
       shell: bash
 
     - run: 'echo "Generated cache key: ${{ steps.cache-key.outputs.key }}"'
