@@ -5,6 +5,9 @@ inputs:
   node-version:
     description: The Node.js version used in the workflow
     required: true
+  working-directory:
+    description: The working directory of the workflow
+    default: '.'
   install-script:
     description: The install script used in the workflow
   cache-dependency-path:
@@ -26,6 +29,7 @@ runs:
       uses: kt-workflows/actions/npm-run-script-cache-key@main
       with:
         node-version: ${{ inputs.node-version }}
+        working-directory: ${{ inputs.working-directory }}
         install-script: ${{ inputs.install-script }}
         cache-dependency-path: ${{ inputs.cache-dependency-path }}
 
