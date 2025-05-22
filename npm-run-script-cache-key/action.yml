@@ -22,7 +22,7 @@ outputs:
 runs:
   using: 'composite'
   steps:
-    - id: install-script-hash
+    - id: calculate-hash
       if: ${{ inputs.install-script != '' }}
       uses: pplanel/hash-calculator-action@v1.3.2
       with:
@@ -31,13 +31,13 @@ runs:
 
     - id: cache-key
       run: |
-        # Check that the 'install-script-hash' has the return value, if not, set intermediate value to 'no-install-script-hash'
+        # Check that the 'calculate-hash' has the return value, if not, set intermediate value to 'no-calculate-hash-value'
         if [ -z "${{ steps.install-script-hash.outputs.digest }}" ]; then
-          echo "install-script-hash.outputs.digest is empty, setting INSTALL_SCRIPT_HASH value to 'no-install-script-hash'"
-          INSTALL_SCRIPT_HASH="no-install-script-hash"
+          echo "install-script-hash.outputs.digest is empty, setting INSTALL_SCRIPT_HASH value to 'no-calculate-hash-value'"
+          INSTALL_SCRIPT_HASH="no-calculate-hash-value"
         else
-          echo "install-script-hash.outputs.digest is not empty, setting INSTALL_SCRIPT_HASH value to '${{ steps.install-script-hash.outputs.digest }}'"
-          INSTALL_SCRIPT_HASH="${{ steps.install-script-hash.outputs.digest }}"
+          echo "calculate-hash.outputs.digest is not empty, setting INSTALL_SCRIPT_HASH value to '${{ steps.calculate-hash.outputs.digest }}'"
+          INSTALL_SCRIPT_HASH="${{ steps.calculate-hash.outputs.digest }}"
         fi
 
         echo "key=node-cache-dependencies-${{ runner.os }}-${{ runner.arch }}-node-${{ inputs.node-version }}-${{ hashFiles(inputs.cache-dependency-path) }}-$INSTALL_SCRIPT_HASH" >> "$GITHUB_OUTPUT"
