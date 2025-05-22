@@ -32,8 +32,8 @@ runs:
     - id: cache-key
       run: |
         # Check that the 'calculate-hash' has the return value, if not, set intermediate value to 'no-calculate-hash-value'
-        if [ -z "${{ steps.install-script-hash.outputs.digest }}" ]; then
-          echo "install-script-hash.outputs.digest is empty, setting INSTALL_SCRIPT_HASH value to 'no-calculate-hash-value'"
+        if [ -z "${{ steps.calculate-hash.outputs.digest }}" ]; then
+          echo "calculate-hash.outputs.digest is empty, setting INSTALL_SCRIPT_HASH value to 'no-calculate-hash-value'"
           INSTALL_SCRIPT_HASH="no-calculate-hash-value"
         else
           echo "calculate-hash.outputs.digest is not empty, setting INSTALL_SCRIPT_HASH value to '${{ steps.calculate-hash.outputs.digest }}'"
