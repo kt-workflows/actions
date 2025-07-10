@@ -16,7 +16,9 @@ inputs:
     default: 'npm ci'
   run-script:
     description: 'Bash script to run after setting up Node.js.'
-    default: npm run coverage
+    default: |
+      npm run build
+      npm run coverage
   cache-additional-path:
     description: 'Additional paths to cache. This is a multi-line list of paths.'
   cache-reset:
