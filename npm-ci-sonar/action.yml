@@ -34,7 +34,7 @@ inputs:
     description: 'SonarQube token to use for authentication.'
   fail-on-empty-token:
     description: 'Fail if the token is empty.'
-    default: 'false'
+    default: 'true'
 
 runs:
   using: 'composite'
