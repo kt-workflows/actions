@@ -54,7 +54,7 @@ runs:
           echo "result=true" >> "$GITHUB_OUTPUT"
         fi
 
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
       if: steps.do-sonar.outputs.result == 'true'
 
     - uses: kt-workflows/actions/npm-run-script@main

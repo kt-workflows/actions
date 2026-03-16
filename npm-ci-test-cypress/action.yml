@@ -33,7 +33,7 @@ inputs:
 runs:
   using: 'composite'
   steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
 
     # Just install the dependencies
     # build will be done by the cypress action

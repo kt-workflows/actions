@@ -17,7 +17,7 @@ runs:
         private-key: ${{ inputs.private-key }}
         configure-git: true
 
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
       with:
         token: ${{ steps.app-token.outputs.token || github.token }}
 

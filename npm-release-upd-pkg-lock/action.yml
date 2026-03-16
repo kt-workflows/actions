@@ -24,7 +24,7 @@ runs:
         configure-git: true
         default-to-github-token: true
 
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
       with:
         ref: ${{ inputs.release-branch }}
         token: ${{ steps.app-token.outputs.token }}

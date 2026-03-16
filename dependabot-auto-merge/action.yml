@@ -40,7 +40,7 @@ runs:
       with:
         github-token: ${{ steps.app-token.outputs.token }}
 
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
       with:
         ref: ${{ github.head_ref }}
         token: ${{ steps.app-token.outputs.token }}
