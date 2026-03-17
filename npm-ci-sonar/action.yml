@@ -70,7 +70,7 @@ runs:
         cache-dependency-path: ${{ inputs.cache-dependency-path }}
         working-directory: ${{ inputs.working-directory }}
 
-    - uses: sonarsource/sonarqube-scan-action@v6
+    - uses: sonarsource/sonarqube-scan-action@v7
       if: steps.do-sonar.outputs.result == 'true'
       env:
         SONAR_TOKEN: ${{ inputs.sonar-token }}
