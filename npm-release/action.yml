@@ -62,6 +62,17 @@ runs:
       run: |
         node -v
         npm -v
+        npm -v
+
+    - shell: bash
+      run: npm install -g npm@11
+
+    - name: Debug versions
+      shell: bash
+      run: |
+        node -v
+        npm -v
+        npm -v
 
     - id: changesets
       uses: changesets/action@v1
