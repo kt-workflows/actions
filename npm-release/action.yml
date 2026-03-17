@@ -57,6 +57,12 @@ runs:
         cache-additional-path: ${{ inputs.cache-additional-path }}
         cache-reset: ${{ inputs.cache-reset }}
 
+    - name: Debug versions
+      shell: bash
+      run: |
+        node -v
+        npm -v
+
     - id: changesets
       uses: changesets/action@v1
       with:
