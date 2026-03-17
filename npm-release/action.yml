@@ -6,8 +6,6 @@ inputs:
     description: 'GitHub App ID used to create a token and submit changes'
   private-key:
     description: 'GitHub App private key used to create a token and submit changes'
-  npm-token:
-    description: 'NPM token used to publish the package'
   matrix-node-version:
     description: 'Node.js versions to use, json array like in matrix.node-version'
   install-script:
@@ -68,7 +66,6 @@ runs:
       env:
         GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
         NPM_CONFIG_PROVENANCE: true
-        NPM_TOKEN: ${{ inputs.npm-token }}
       continue-on-error: true
 
     # Get the branch of the pull request from its number
