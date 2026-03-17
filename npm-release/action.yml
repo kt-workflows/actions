@@ -73,7 +73,7 @@ runs:
     - id: changesets
       uses: changesets/action@v1
       with:
-        #   # This expects you to have a script called release which does a build for your packages and calls changeset publish
+        # This expects you to have a script called release which does a build for your packages and calls changeset publish
         publish: ${{ inputs.publish-script }}
         version: ${{ inputs.version-script }}
       env:
