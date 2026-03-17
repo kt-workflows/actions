@@ -1,0 +1,22 @@
+name: Generate hash string for input string
+description: Generate a hash string for the given input string, which can be used as a cache key or for other purposes.
+
+inputs:
+  input:
+    description: The input value used for generating the hash string
+    required: true
+
+outputs:
+  hash:
+    description: The generated hash string
+    value: ${{ steps.calculate-hash.outputs.hash }}
+
+runs:
+  using: 'composite'
+  steps:
+    - id: calculate-hash
+      shell: bash
+      run: |
+        input='${{ inputs.input }}'
+        hash="$(printf '%s' "$input" | sha256sum | awk '{print $1}')"
+        echo "hash=$hash" >> "$GITHUB_OUTPUT"
