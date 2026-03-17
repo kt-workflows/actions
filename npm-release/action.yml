@@ -6,6 +6,8 @@ inputs:
     description: 'GitHub App ID used to create a token and submit changes'
   private-key:
     description: 'GitHub App private key used to create a token and submit changes'
+  node-version:
+    description: 'Concrete Node.js version to use'
   matrix-node-version:
     description: 'Node.js versions to use, json array like in matrix.node-version'
   install-script:
@@ -50,6 +52,7 @@ runs:
 
     - uses: kt-workflows/actions/npm-run-script@main
       with:
+        node-version: ${{ inputs.node-version }}
         matrix-node-version: ${{ inputs.matrix-node-version }}
         matrix-node-version-earliest: true
         install-script: ${{ inputs.install-script }}
