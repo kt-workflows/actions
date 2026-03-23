@@ -13,6 +13,8 @@ inputs:
   cache-dependency-path:
     description: 'Used to specify the path to a dependency file: package-lock.json, yarn.lock, etc. Supports wildcards or a list of file names for caching multiple dependencies.'
     default: '**/package-lock.json'
+  cache-additional-path:
+    description: 'Additional paths to cache. This is a multi-line list of paths.'
 
 outputs:
   key:
@@ -25,9 +27,15 @@ runs:
     - id: calculate-hash
       uses: kt-workflows/actions/calculate-hash@main
       with:
-        input: '${{ inputs.working-directory }}-${{ inputs.install-script }}'
+        input: |
+          ${{ inputs.working-directory }}
+          ---
+          ${{ inputs.install-script }}
+          ---
+          ${{ inputs.cache-additional-path }}
 
     - id: cache-key
+      shell: bash
       run: |
         # Check that the 'calculate-hash' has the return value, if not, set intermediate value to 'no-calculate-hash-value'
         if [ -z "${{ steps.calculate-hash.outputs.hash }}" ]; then
@@ -39,7 +47,8 @@ runs:
         fi
 
         echo "key=node-cache-dependencies-${{ runner.os }}-${{ runner.arch }}-node-${{ inputs.node-version }}-${{ hashFiles(inputs.cache-dependency-path) }}-$CALCULATED_HASH" >> "$GITHUB_OUTPUT"
-      shell: bash
 
-    - run: 'echo "Generated cache key: ${{ steps.cache-key.outputs.key }}"'
+    - id: echo
       shell: bash
+      run: |
+        echo "Generated cache key: ${{ steps.cache-key.outputs.key }}"

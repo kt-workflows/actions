@@ -13,9 +13,8 @@ inputs:
   cache-dependency-path:
     description: 'Used to specify the path to a dependency file: package-lock.json, yarn.lock, etc. Supports wildcards or a list of file names for caching multiple dependencies.'
     default: '**/package-lock.json'
-  github-token:
-    description: The GitHub token to use for authentication
-    default: ${{ github.token }}
+  cache-additional-path:
+    description: 'Additional paths to cache. This is a multi-line list of paths.'
 
 outputs:
   key:
@@ -32,6 +31,7 @@ runs:
         working-directory: ${{ inputs.working-directory }}
         install-script: ${{ inputs.install-script }}
         cache-dependency-path: ${{ inputs.cache-dependency-path }}
+        cache-additional-path: ${{ inputs.cache-additional-path }}
 
     - continue-on-error: true
       shell: bash
