@@ -17,14 +17,14 @@ inputs:
   no-cache:
     description: 'Skip dependency and additional path caching.'
     default: 'false'
+  cache-reset:
+    description: 'Delete the cache if it exists to create a new one.'
+    default: 'false'
   cache-additional-path:
     description: 'Additional paths to cache. This is a multi-line list of paths.'
     default: |-
       /home/runner/.cache/Cypress
       /home/runner/.cache/ms-playwright
-  cache-reset:
-    description: 'Delete the cache if it exists to create a new one.'
-    default: 'false'
   cache-dependency-path:
     description: 'Path to a dependency file such as package-lock.json or yarn.lock. Supports wildcards or a multi-line list.'
     default: '**/package-lock.json'
