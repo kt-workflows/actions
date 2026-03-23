@@ -62,11 +62,6 @@ runs:
         cache-dependency-path: ${{ inputs.cache-dependency-path }}
       continue-on-error: true
 
-    - id: echo
-      shell: bash
-      run: |
-        echo "cache-additional-path: ${{ inputs.cache-additional-path }}"
-
     - id: npm-cache
       if: ${{ inputs.no-cache != 'true' }}
       uses: actions/cache@v5
