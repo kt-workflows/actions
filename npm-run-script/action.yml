@@ -43,7 +43,6 @@ runs:
         matrix-node-version-earliest: ${{ inputs.matrix-node-version-earliest }}
         cache: npm
         cache-dependency-path: ${{ inputs.cache-dependency-path }}
-        cache-additional-path: ${{ inputs.cache-additional-path }}
 
     - id: cache-key
       if: ${{ inputs.no-cache != 'true' }}
