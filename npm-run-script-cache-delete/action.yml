@@ -2,6 +2,9 @@ name: Delete NPM dependencies cache
 description: Delete cache for the npm-run-script action, under which dependencies (e.g. node_modules and additional paths) are stored.
 
 inputs:
+  github-token:
+    description: 'GitHub token to use for authentication.'
+    default: '${{ github.token }}'
   node-version:
     description: The Node.js version used in the workflow
     required: true

@@ -2,6 +2,9 @@ name: 'Prepare and run scripts in Node.js environment'
 description: 'Set up a Node.js environment and run scripts with dependency caching.'
 author: 'GitHub'
 inputs:
+  github-token:
+    description: 'GitHub token to use for authentication.'
+    default: '${{ github.token }}'
   node-version:
     description: 'Concrete Node.js version to use'
   matrix-node-version:
