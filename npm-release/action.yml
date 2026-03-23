@@ -24,6 +24,9 @@ inputs:
     default: npm run changeset:version
   cache-additional-path:
     description: 'Additional paths to cache. This is a multi-line list of paths.'
+    default: |-
+      /home/runner/.cache/Cypress
+      /home/runner/.cache/ms-playwright
   cache-reset:
     description: 'Delete the cache if it exists to cache the new one.'
     default: 'false'
