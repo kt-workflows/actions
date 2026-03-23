@@ -1,30 +1,32 @@
 name: 'Prepare and run scripts in Node.js environment'
-description: 'Setup Node.js environment and run scripts. Uses caches for node and npm_modules.'
+description: 'Set up a Node.js environment and run scripts with dependency caching.'
 author: 'GitHub'
 inputs:
   node-version:
     description: 'Concrete Node.js version to use'
   matrix-node-version:
-    description: 'Version Spec array, i.e. from matrix.node-version. Latest will be selected from this array and setup-node will be run with the selected version.'
+    description: 'Version spec array, e.g. from matrix.node-version. The latest matching version will be selected and passed to setup-node.'
   matrix-node-version-earliest:
-    description: 'Set this option if you want the action to select for the earliest available version that satisfies the version spec.'
+    description: 'Set this option if you want the action to select the earliest available version that satisfies the version spec.'
     default: 'false'
   install-script:
-    description: 'Bash script to run after setting up Node.js.'
+    description: 'Bash script to run after Node.js setup when cache restore is skipped or invalidated.'
     default: 'npm ci'
   run-script:
-    description: 'Bash script to run after setting up Node.js.'
+    description: 'Bash script to run after setup.'
   no-cache:
-    description: 'Skip caching of node_modules.'
+    description: 'Skip dependency and additional path caching.'
     default: 'false'
   cache-additional-path:
     description: 'Additional paths to cache. This is a multi-line list of paths.'
-    default: '/home/runner/.cache/Cypress /home/runner/.cache/ms-playwright'
+    default: |-
+      /home/runner/.cache/Cypress
+      /home/runner/.cache/ms-playwright
   cache-reset:
-    description: 'Delete the cache if it exists to cache the new one.'
+    description: 'Delete the cache if it exists to create a new one.'
     default: 'false'
   cache-dependency-path:
-    description: 'Used to specify the path to a dependency file: package-lock.json, yarn.lock, etc. Supports wildcards or a list of file names for caching multiple dependencies.'
+    description: 'Path to a dependency file such as package-lock.json or yarn.lock. Supports wildcards or a multi-line list.'
     default: '**/package-lock.json'
   working-directory:
     description: 'The working directory where the scripts will be run.'
@@ -70,11 +72,11 @@ runs:
         key: ${{ steps.cache-key.outputs.key }}
 
     - id: install-script
-      if: ${{ inputs.install-script != '' && (steps.npm-cache.outputs.cache-hit != 'true' || inputs.cache-reset == 'true') }}
+      if: ${{ inputs.install-script != '' && (inputs.no-cache == 'true' || steps.npm-cache.outputs.cache-hit != 'true' || inputs.cache-reset == 'true') }}
       shell: bash
       run: |
         echo "Running install script..."
-        eval "${{ inputs.install-script }}"
+        ${{ inputs.install-script }}
       working-directory: ${{ inputs.working-directory }}
 
     - id: run-script
@@ -82,5 +84,5 @@ runs:
       shell: bash
       run: |
         echo "Running script..."
-        eval "${{ inputs.run-script }}"
+        ${{ inputs.run-script }}
       working-directory: ${{ inputs.working-directory }}
