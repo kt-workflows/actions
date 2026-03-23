@@ -4,7 +4,6 @@ description: Delete cache for the npm-run-script action, under which dependencie
 inputs:
   github-token:
     description: 'GitHub token to use for authentication.'
-    default: '${{ github.token }}'
   node-version:
     description: The Node.js version used in the workflow
     required: true
@@ -42,4 +41,4 @@ runs:
         gh extension install actions/gh-actions-cache
         gh actions-cache delete "${{ steps.cache-key.outputs.key }}" --confirm
       env:
-        GH_TOKEN: ${{ inputs.github-token }}
+        GH_TOKEN: ${{ inputs.github-token || github.token }}

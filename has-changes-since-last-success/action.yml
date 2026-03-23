@@ -7,7 +7,6 @@ branding:
 inputs:
   github-token:
     description: 'GitHub token to use for authentication.'
-    default: '${{ github.token }}'
   paths:
     description: 'Paths to check for changes. .github is always included.'
     default: '.'
@@ -66,7 +65,7 @@ runs:
       with:
         fetch-depth: ${{ inputs.fetch-depth }}
         path: ${{ steps.temp_dir.outputs.temp_dir }}
-        token: ${{ inputs.github-token }}
+        token: ${{ inputs.github-token || github.token }}
 
     - id: commits
       shell: bash
@@ -109,8 +108,7 @@ runs:
         echo "commit_sha=$commit_sha" >> "$GITHUB_OUTPUT"
       working-directory: ${{ steps.temp_dir.outputs.temp_dir }}
       env:
-        GITHUB_TOKEN: ${{ inputs.github-token }}
-        GH_TOKEN: ${{ inputs.github-token }}
+        GH_TOKEN: ${{ inputs.github-token || github.token }}
 
     # Check for changes since the last successful run
     - id: changes
@@ -143,5 +141,4 @@ runs:
         fi
       working-directory: ${{ steps.temp_dir.outputs.temp_dir }}
       env:
-        GITHUB_TOKEN: ${{ inputs.github-token }}
-        GH_TOKEN: ${{ inputs.github-token }}
+        GH_TOKEN: ${{ inputs.github-token || github.token }}
