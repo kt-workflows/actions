@@ -1,0 +1,148 @@
+name: Get Associated PR
+description: Get the pull request associated with a commit SHA using the GitHub REST API.
+
+inputs:
+  github-token:
+    description: GitHub token with pull-requests:read access
+    required: false
+    default: ${{ github.token }}
+  repository:
+    description: owner/repo; defaults to current repository
+    required: false
+    default: ${{ github.repository }}
+  sha:
+    description: Commit SHA to inspect
+    required: true
+  echo:
+    description: Whether to echo the API response and resolved PR details to the console (true/false)
+    required: false
+    default: 'false'
+
+outputs:
+  pr-found:
+    description: Whether an associated PR was found
+    value: ${{ steps.resolve.outputs.pr-found }}
+  pr-count:
+    description: Number of associated PRs returned by the API
+    value: ${{ steps.resolve.outputs.pr-count }}
+  pr-number:
+    description: Pull request number
+    value: ${{ steps.resolve.outputs.pr-number }}
+  pr-url:
+    description: Pull request URL
+    value: ${{ steps.resolve.outputs.pr-url }}
+  pr-state:
+    description: Pull request state
+    value: ${{ steps.resolve.outputs.pr-state }}
+  pr-merged:
+    description: Whether the PR is merged
+    value: ${{ steps.resolve.outputs.pr-merged }}
+  pr-merged-at:
+    description: Pull request merged_at value
+    value: ${{ steps.resolve.outputs.pr-merged-at }}
+  pr-merge-commit-sha:
+    description: Pull request merge commit SHA
+    value: ${{ steps.resolve.outputs.pr-merge-commit-sha }}
+  pr-base-ref:
+    description: Pull request base ref
+    value: ${{ steps.resolve.outputs.pr-base-ref }}
+  pr-head-ref:
+    description: Pull request head ref
+    value: ${{ steps.resolve.outputs.pr-head-ref }}
+  pr-json:
+    description: Full first associated PR JSON as a compact string
+    value: ${{ steps.resolve.outputs.pr-json }}
+  prs-json:
+    description: Full API response array as a compact string
+    value: ${{ steps.resolve.outputs.prs-json }}
+  pr-head-repo-full-name:
+    description: Pull request head repository full name (owner/repo)
+    value: ${{ steps.resolve.outputs.pr-head-repo-full-name }}
+
+runs:
+  using: composite
+  steps:
+    - id: resolve
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+        GH_REPOSITORY: ${{ inputs.repository }}
+        GH_SHA: ${{ inputs.sha }}
+        GH_ECHO: ${{ inputs.echo }}
+      run: |
+        set -euo pipefail
+
+        api_url="https://api.github.com/repos/${GH_REPOSITORY}/commits/${GH_SHA}/pulls"
+
+        echo "Checking associated PRs for repository: ${GH_REPOSITORY}"
+        echo "Checking associated PRs for commit SHA: ${GH_SHA}"
+        echo "API URL: ${api_url}"
+
+        response="$(curl -fsSL \
+          -H "Accept: application/vnd.github+json" \
+          -H "Authorization: Bearer ${GH_TOKEN}" \
+          -H "X-GitHub-Api-Version: 2026-03-10" \
+          "${api_url}")"
+
+        if [[ "${GH_ECHO}" == "true" ]]; then
+          echo "Associated PRs response:"
+          echo "${response}" | jq .
+        fi
+
+        count="$(echo "${response}" | jq 'length')"
+
+        echo "prs-json=$(echo "${response}" | jq -c '.')" >> "$GITHUB_OUTPUT"
+        echo "pr-count=${count}" >> "$GITHUB_OUTPUT"
+
+        if [[ "${count}" -eq 0 ]]; then
+          echo "No associated PR found."
+          echo "pr-found=false" >> "$GITHUB_OUTPUT"
+          echo "pr-number=" >> "$GITHUB_OUTPUT"
+          echo "pr-url=" >> "$GITHUB_OUTPUT"
+          echo "pr-state=" >> "$GITHUB_OUTPUT"
+          echo "pr-merged=false" >> "$GITHUB_OUTPUT"
+          echo "pr-merged-at=" >> "$GITHUB_OUTPUT"
+          echo "pr-merge-commit-sha=" >> "$GITHUB_OUTPUT"
+          echo "pr-base-ref=" >> "$GITHUB_OUTPUT"
+          echo "pr-head-ref=" >> "$GITHUB_OUTPUT"
+          echo "pr-json=" >> "$GITHUB_OUTPUT"
+          echo "pr-head-repo-full-name=" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+
+        if [[ "${count}" -gt 1 && "${GH_ECHO}" == "true" ]]; then
+          echo "Multiple associated PRs returned; using the first one."
+        fi
+
+        pr_json="$(echo "${response}" | jq -c '.[0]')"
+
+        pr_number="$(echo "${pr_json}" | jq -r '.number')"
+        pr_url="$(echo "${pr_json}" | jq -r '.html_url')"
+        pr_state="$(echo "${pr_json}" | jq -r '.state')"
+        pr_merged_at="$(echo "${pr_json}" | jq -r '.merged_at')"
+        pr_merge_commit_sha="$(echo "${pr_json}" | jq -r '.merge_commit_sha')"
+        pr_base_ref="$(echo "${pr_json}" | jq -r '.base.ref')"
+        pr_head_ref="$(echo "${pr_json}" | jq -r '.head.ref')"
+        pr_head_repo_full_name="$(echo "${pr_json}" | jq -r '.head.repo.full_name // ""')"
+        if [[ "${pr_merged_at}" != "null" ]]; then
+          pr_merged="true"
+        else
+          pr_merged="false"
+        fi
+
+        if [[ "${GH_ECHO}" == "true" ]]; then
+          echo "First associated PR:"
+          echo "${pr_json}" | jq .
+        fi
+
+        echo "pr-found=true" >> "$GITHUB_OUTPUT"
+        echo "pr-number=${pr_number}" >> "$GITHUB_OUTPUT"
+        echo "pr-url=${pr_url}" >> "$GITHUB_OUTPUT"
+        echo "pr-state=${pr_state}" >> "$GITHUB_OUTPUT"
+        echo "pr-merged=${pr_merged}" >> "$GITHUB_OUTPUT"
+        echo "pr-merged-at=${pr_merged_at}" >> "$GITHUB_OUTPUT"
+        echo "pr-merge-commit-sha=${pr_merge_commit_sha}" >> "$GITHUB_OUTPUT"
+        echo "pr-base-ref=${pr_base_ref}" >> "$GITHUB_OUTPUT"
+        echo "pr-head-ref=${pr_head_ref}" >> "$GITHUB_OUTPUT"
+        echo "pr-json=${pr_json}" >> "$GITHUB_OUTPUT"
+        echo "pr-head-repo-full-name=${pr_head_repo_full_name}" >> "$GITHUB_OUTPUT"
