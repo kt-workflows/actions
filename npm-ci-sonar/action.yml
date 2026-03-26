@@ -38,6 +38,9 @@ inputs:
   fail-on-empty-token:
     description: 'Fail if the token is empty.'
     default: 'true'
+  checkout:
+    description: 'Whether to checkout the repository before running the SonarQube scan.'
+    default: 'true'
 
 runs:
   using: 'composite'
@@ -58,7 +61,7 @@ runs:
         fi
 
     - uses: actions/checkout@v6
-      if: steps.do-sonar.outputs.result == 'true'
+      if: steps.do-sonar.outputs.result == 'true' && inputs.checkout == 'true'
 
     - uses: kt-workflows/actions/npm-run-script@main
       if: steps.do-sonar.outputs.result == 'true'
