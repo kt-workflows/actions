@@ -5,12 +5,12 @@ inputs:
   node-version:
     description: 'Version Spec to use. Examples: 18, 18.x, 18.0.0, 18.0.x, 18.0.0-x, 18.0.0-x64.'
     required: false
-  skip-node-setup:
-    description: 'Skip Node.js setup. This is useful if you have already set up Node.js in a previous step and want to avoid redundant setup.'
-    default: 'false'
   install-script:
     description: 'Bash script to run after setting up Node.js.'
     default: 'npm ci'
+  skip-npm-setup:
+    description: 'Skip Node.js setup and npm installation. This is useful if you have already set up Node.js environment in a previous step and want to avoid redundant setup.'
+    default: 'false'
   build-script:
     description: 'Bash script to run after setting up Node.js.'
     default: npm run build
@@ -45,7 +45,7 @@ runs:
     - uses: kt-workflows/actions/npm-run-script@main
       with:
         node-version: ${{ inputs.node-version }}
-        skip-node-setup: ${{ inputs.skip-node-setup }}
+        skip-npm-setup: ${{ inputs.skip-npm-setup }}
         install-script: ${{ inputs.install-script }}
         cache-additional-path: ${{ inputs.cache-additional-path }}
         cache-reset: ${{ inputs.cache-reset }}

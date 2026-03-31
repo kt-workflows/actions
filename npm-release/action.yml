@@ -10,12 +10,12 @@ inputs:
     description: 'Concrete Node.js version to use'
   matrix-node-version:
     description: 'Node.js versions to use, json array like in matrix.node-version'
-  skip-node-setup:
-    description: 'Skip Node.js setup. This is useful if you have already set up Node.js in a previous step and want to avoid redundant setup.'
-    default: 'false'
   install-script:
     description: 'Install script to run'
     default: npm ci
+  skip-npm-setup:
+    description: 'Skip Node.js setup and npm installation. This is useful if you have already set up Node.js environment in a previous step and want to avoid redundant setup.'
+    default: 'false'
   build-script:
     description: 'Script to run to build the package'
     default: npm run build:release
@@ -61,7 +61,7 @@ runs:
         node-version: ${{ inputs.node-version }}
         matrix-node-version: ${{ inputs.matrix-node-version }}
         matrix-node-version-earliest: true
-        skip-node-setup: ${{ inputs.skip-node-setup }}
+        skip-npm-setup: ${{ inputs.skip-npm-setup }}
         install-script: ${{ inputs.install-script }}
         run-script: ${{ inputs.build-script }}
         cache-additional-path: ${{ inputs.cache-additional-path }}

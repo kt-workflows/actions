@@ -11,12 +11,12 @@ inputs:
   matrix-node-version-earliest:
     description: 'Set this option if you want the action to select for the earliest available version that satisfies the version spec.'
     default: 'false'
-  skip-node-setup:
-    description: 'Skip Node.js setup. This is useful if you have already set up Node.js in a previous step and want to avoid redundant setup.'
-    default: 'false'
   install-script:
     description: 'Bash script to run after setting up Node.js.'
     default: 'npm ci'
+  skip-npm-setup:
+    description: 'Skip Node.js setup and npm installation. This is useful if you have already set up Node.js environment in a previous step and want to avoid redundant setup.'
+    default: 'false'
   run-script:
     description: 'Bash script to run after setting up Node.js.'
     default: |
@@ -72,7 +72,7 @@ runs:
         node-version: ${{ inputs.node-version }}
         matrix-node-version: ${{ inputs.matrix-node-version }}
         matrix-node-version-earliest: ${{ inputs.matrix-node-version-earliest }}
-        skip-node-setup: ${{ inputs.skip-node-setup }}
+        skip-npm-setup: ${{ inputs.skip-npm-setup }}
         install-script: ${{ inputs.install-script }}
         run-script: ${{ inputs.run-script }}
         cache-additional-path: ${{ inputs.cache-additional-path }}

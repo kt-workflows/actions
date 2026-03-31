@@ -9,12 +9,12 @@ inputs:
   matrix-node-version-earliest:
     description: 'Set this option if you want the action to select the earliest available version that satisfies the version spec.'
     default: 'false'
-  skip-node-setup:
-    description: 'Skip Node.js setup. This is useful if you have already set up Node.js in a previous step and want to avoid redundant setup.'
-    default: 'false'
   install-script:
     description: 'Bash script to run after Node.js setup when cache restore is skipped or invalidated.'
     default: 'npm ci'
+  skip-npm-setup:
+    description: 'Skip Node.js setup and npm installation. This is useful if you have already set up Node.js environment in a previous step and want to avoid redundant setup.'
+    default: 'false'
   run-script:
     description: 'Bash script to run after setup.'
   no-cache:
@@ -39,7 +39,7 @@ runs:
   using: composite
   steps:
     - id: setup-node
-      if: ${{ inputs.skip-node-setup != 'true' }}
+      if: ${{ inputs.skip-npm-setup != 'true' }}
       uses: kt-workflows/actions/setup-node-minmax@main
       with:
         node-version: ${{ inputs.node-version }}
@@ -49,7 +49,7 @@ runs:
         cache-dependency-path: ${{ inputs.cache-dependency-path }}
 
     - id: cache-key
-      if: ${{ inputs.no-cache != 'true' && inputs.cache-reset != 'true' && inputs.skip-node-setup != 'true' }}
+      if: ${{ inputs.no-cache != 'true' && inputs.cache-reset != 'true' && inputs.skip-npm-setup != 'true' }}
       uses: kt-workflows/actions/npm-run-script-cache-key@main
       with:
         node-version: ${{ steps.setup-node.outputs.node-version }}
@@ -58,7 +58,7 @@ runs:
         cache-dependency-path: ${{ inputs.cache-dependency-path }}
         cache-additional-path: ${{ inputs.cache-additional-path }}
 
-    - if: ${{ inputs.cache-reset == 'true' && inputs.no-cache != 'true' && inputs.skip-node-setup != 'true' }}
+    - if: ${{ inputs.cache-reset == 'true' && inputs.no-cache != 'true' && inputs.skip-npm-setup != 'true' }}
       uses: kt-workflows/actions/npm-run-script-cache-delete@main
       with:
         node-version: ${{ steps.setup-node.outputs.node-version }}
@@ -69,7 +69,7 @@ runs:
       continue-on-error: true
 
     - id: npm-cache
-      if: ${{ inputs.no-cache != 'true' && inputs.skip-node-setup != 'true' }}
+      if: ${{ inputs.no-cache != 'true' && inputs.skip-npm-setup != 'true' }}
       uses: actions/cache@v5
       with:
         path: |
@@ -78,7 +78,7 @@ runs:
         key: ${{ steps.cache-key.outputs.key }}
 
     - id: install-script
-      if: ${{ inputs.install-script != '' && (inputs.no-cache == 'true' || steps.npm-cache.outputs.cache-hit != 'true' || inputs.cache-reset == 'true') && inputs.skip-node-setup != 'true' }}
+      if: ${{ inputs.install-script != '' && (inputs.no-cache == 'true' || steps.npm-cache.outputs.cache-hit != 'true' || inputs.cache-reset == 'true') && inputs.skip-npm-setup != 'true' }}
       shell: bash
       run: |
         echo "Running install script..."
