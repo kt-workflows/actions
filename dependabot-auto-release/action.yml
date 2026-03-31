@@ -8,6 +8,12 @@ inputs:
   private-key:
     description: 'GitHub App private key used to create a token and submit changes'
     required: true
+  approve-app-id:
+    description: 'GitHub App ID used to create a token and approve the PR'
+    required: false
+  approve-private-key:
+    description: 'GitHub App private key used to create a token and approve the PR'
+    required: false
 
 runs:
   using: 'composite'
@@ -105,3 +111,23 @@ runs:
         gh pr merge $pr_number --auto --squash --delete-branch
       env:
         GH_TOKEN: ${{ steps.app-token.outputs.token }}
+
+    - id: approve-app-token
+      uses: kt-workflows/actions/create-github-app-token@main
+      if: |
+        inputs.approve-app-id != '' && inputs.approve-private-key != ''
+      with:
+        app-id: ${{ inputs.approve-app-id }}
+        private-key: ${{ inputs.approve-private-key }}
+        default-to-github-token: false
+        configure-git: false
+
+    - if: >-
+        steps.approve-app-token.outputs.token != '' &&
+        steps.check-changeset.outputs.highest_version == 'patch' &&
+        steps.check-pr.outputs.pr_number != ''
+      shell: bash
+      env:
+        PR_NUMBER: ${{ steps.check-pr.outputs.pr_number }}
+        GH_TOKEN: ${{ steps.approve-app-token.outputs.token }}
+      run: gh pr review $PR_NUMBER --approve --body "Approved! Servus!"

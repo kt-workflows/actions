@@ -6,6 +6,10 @@ inputs:
     description: 'GitHub App ID used to create a token and submit changes'
   private-key:
     description: 'GitHub App private key used to create a token and submit changes'
+  approve-app-id:
+    description: 'GitHub App ID used to create a token and approve the PR'
+  approve-private-key:
+    description: 'GitHub App private key used to create a token and approve the PR'
   generate-changesets:
     description: 'Generate changesets for the updated dependencies'
     default: 'true'
@@ -40,12 +44,35 @@ runs:
       with:
         github-token: ${{ steps.app-token.outputs.token }}
 
+    - id: approve-app-token
+      uses: kt-workflows/actions/create-github-app-token@main
+      if: |
+        inputs.approve-app-id != '' && inputs.approve-private-key != '' &&
+        (steps.metadata.outputs.update-type == 'version-update:semver-minor' ||
+          steps.metadata.outputs.update-type == 'version-update:semver-patch')
+      with:
+        app-id: ${{ inputs.approve-app-id }}
+        private-key: ${{ inputs.approve-private-key }}
+        default-to-github-token: false
+        configure-git: false
+
+    - if: |
+        steps.approve-app-token.outputs.token != '' &&
+        (steps.metadata.outputs.update-type == 'version-update:semver-minor' ||
+          steps.metadata.outputs.update-type == 'version-update:semver-patch')
+      shell: bash
+      env:
+        PR_URL: ${{github.event.pull_request.html_url}}
+        GH_TOKEN: ${{ steps.approve-app-token.outputs.token }}
+      run: gh pr review --approve --body "Approved! Servus!" "$PR_URL"
+
     - uses: actions/checkout@v6
       with:
         ref: ${{ github.head_ref }}
         token: ${{ steps.app-token.outputs.token }}
 
-    - uses: kt-workflows/actions/dependabot-generate-changesets@main
+    - id: generate-changesets
+      uses: kt-workflows/actions/dependabot-generate-changesets@main
       if: ${{ inputs.generate-changesets == 'true' }}
       with:
         updated-dependencies-json: ${{ tojson(steps.metadata.outputs.updated-dependencies-json) }}
@@ -67,8 +94,8 @@ runs:
     - if: |
         (steps.metadata.outputs.update-type == 'version-update:semver-minor' ||
           steps.metadata.outputs.update-type == 'version-update:semver-patch')
-      run: gh pr merge --auto --squash "$PR_URL"
       shell: bash
       env:
         PR_URL: ${{github.event.pull_request.html_url}}
         GH_TOKEN: ${{ steps.app-token.outputs.token }}
+      run: gh pr merge --auto --squash "$PR_URL"
