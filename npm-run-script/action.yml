@@ -78,7 +78,7 @@ runs:
         key: ${{ steps.cache-key.outputs.key }}
 
     - id: install-script
-      if: ${{ inputs.install-script != '' && (inputs.no-cache == 'true' || steps.npm-cache.outputs.cache-hit != 'true' || inputs.cache-reset == 'true') }}
+      if: ${{ inputs.install-script != '' && (inputs.no-cache == 'true' || steps.npm-cache.outputs.cache-hit != 'true' || inputs.cache-reset == 'true') && inputs.skip-node-setup != 'true' }}
       shell: bash
       run: |
         echo "Running install script..."
