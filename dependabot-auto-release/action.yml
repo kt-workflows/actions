@@ -107,6 +107,7 @@ runs:
         echo "${{ steps.check-pr.outputs.pr_number }}"
         echo "${{ steps.approve-app-token.outputs.token }}"
 
+    # Always FIRST: Approve, then Merge. Otherwise somehow doesn't work or something.
     - id: approve-app-token
       name: Create token for approving PR
       uses: kt-workflows/actions/create-github-app-token@main

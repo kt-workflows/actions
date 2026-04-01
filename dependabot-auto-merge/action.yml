@@ -27,12 +27,14 @@ runs:
   steps:
     # Check if we are in the Dependabot PR context if not, fail the action
     - if: github.event.pull_request.user.login != 'dependabot[bot]'
+      name: Check if the PR is created by Dependabot
       shell: bash
       run: |
         echo "This action is only for Dependabot PRs"
         exit 1
 
     - id: app-token
+      name: Create token for submitting changes
       uses: kt-workflows/actions/create-github-app-token@main
       with:
         app-id: ${{ inputs.app-id }}
@@ -40,11 +42,41 @@ runs:
         configure-git: true
 
     - id: metadata
+      name: Fetch metadata about the updated dependencies
       uses: dependabot/fetch-metadata@v2
       with:
         github-token: ${{ steps.app-token.outputs.token }}
 
+    - name: Checkout PR branch
+      uses: actions/checkout@v6
+      with:
+        ref: ${{ github.head_ref }}
+        token: ${{ steps.app-token.outputs.token }}
+
+    - id: generate-changesets
+      name: Generate changesets for updated dependencies
+      uses: kt-workflows/actions/dependabot-generate-changesets@main
+      if: ${{ inputs.generate-changesets == 'true' }}
+      with:
+        updated-dependencies-json: ${{ tojson(steps.metadata.outputs.updated-dependencies-json) }}
+
+    - name: Commit and push changesets
+      if: ${{ inputs.generate-changesets == 'true' }}
+      shell: bash
+      run: |
+        # Check if there are any changes to commit in the .changeset directory
+        if [ -z "$(git status --porcelain)" ]; then
+          echo "No changes to commit"
+        else
+          git add .changeset
+          git commit -m "Add changesets for Dependabot PR"
+          git push
+        fi
+      env:
+        GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+
     - id: approve-app-token
+      name: Create token for approving PR
       uses: kt-workflows/actions/create-github-app-token@main
       if: |
         inputs.approve-app-id != '' && inputs.approve-private-key != '' &&
@@ -56,7 +88,8 @@ runs:
         default-to-github-token: false
         configure-git: false
 
-    - if: |
+    - name: Approve Dependabot PR
+      if: |
         steps.approve-app-token.outputs.token != '' &&
         (steps.metadata.outputs.update-type == 'version-update:semver-minor' ||
           steps.metadata.outputs.update-type == 'version-update:semver-patch')
@@ -65,31 +98,6 @@ runs:
         PR_URL: ${{github.event.pull_request.html_url}}
         GH_TOKEN: ${{ steps.approve-app-token.outputs.token }}
       run: gh pr review --approve --body "Approved! Servus!" "$PR_URL"
-
-    - uses: actions/checkout@v6
-      with:
-        ref: ${{ github.head_ref }}
-        token: ${{ steps.app-token.outputs.token }}
-
-    - id: generate-changesets
-      uses: kt-workflows/actions/dependabot-generate-changesets@main
-      if: ${{ inputs.generate-changesets == 'true' }}
-      with:
-        updated-dependencies-json: ${{ tojson(steps.metadata.outputs.updated-dependencies-json) }}
-
-    - run: |
-        # Check if there are any changes to commit in the .changeset directory
-        if [ -z "$(git status --porcelain)" ]; then
-          echo "No changes to commit"
-        else
-          git add .changeset
-          git commit -m "Add changesets for Dependabot PR"
-          git push
-        fi
-      shell: bash
-      if: ${{ inputs.generate-changesets == 'true' }}
-      env:
-        GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
 
     - if: |
         (steps.metadata.outputs.update-type == 'version-update:semver-minor' ||
