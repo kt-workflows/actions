@@ -34,6 +34,23 @@ runs:
         ref: ${{ github.event.repository.default_branch }}
         fetch-depth: 0
 
+    - name: Remove PRE changeset files
+      shell: bash
+      run: |
+        if [ -f .changeset/pre.json ]; then
+          echo "Found .changeset/pre.json, removing prerelease-tracked changeset files"
+
+          jq -r '.changesets[]?' .changeset/pre.json | while IFS= read -r name; do
+            file=".changeset/${name}.md"
+            if [ -f "$file" ]; then
+              rm "$file"
+              echo "Removed $file"
+            else
+              echo "Skipped missing $file"
+            fi
+          done
+        fi
+
     - name: Check for the highest Changeset version
       id: check-changeset
       shell: bash
