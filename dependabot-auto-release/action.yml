@@ -19,6 +19,7 @@ runs:
   using: 'composite'
   steps:
     - id: app-token
+      name: Create token for merging PR
       uses: kt-workflows/actions/create-github-app-token@main
       with:
         app-id: ${{ inputs.app-id }}
@@ -84,8 +85,8 @@ runs:
         echo "Highest version: $highest_version"
         echo "highest_version=$highest_version" >> "$GITHUB_OUTPUT"
 
-    - name: Check for the open Changeset Release PR
-      id: check-pr
+    - id: check-pr
+      name: Check for the open Changeset Release PR
       if: steps.check-changeset.outputs.highest_version == 'patch'
       shell: bash
       run: |
@@ -107,7 +108,6 @@ runs:
         echo "${{ steps.check-pr.outputs.pr_number }}"
         echo "${{ steps.approve-app-token.outputs.token }}"
 
-    # Always FIRST: Approve, then Merge. Otherwise somehow doesn't work or something.
     - id: approve-app-token
       name: Create token for approving PR
       uses: kt-workflows/actions/create-github-app-token@main
@@ -137,9 +137,9 @@ runs:
         steps.check-changeset.outputs.highest_version == 'patch' &&
         steps.check-pr.outputs.pr_number != ''
       shell: bash
-      run: |
-        pr_number=${{ steps.check-pr.outputs.pr_number }}
-        echo "Merging PR #$pr_number"
-        gh pr merge $pr_number --auto --squash --delete-branch
       env:
+        PR_NUMBER: ${{ steps.check-pr.outputs.pr_number }}
         GH_TOKEN: ${{ steps.app-token.outputs.token }}
+      run: |
+        echo "Merging PR #$PR_NUMBER"
+        gh pr merge $PR_NUMBER --auto --squash --delete-branch
