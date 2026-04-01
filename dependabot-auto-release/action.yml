@@ -23,7 +23,7 @@ runs:
       with:
         app-id: ${{ inputs.app-id }}
         private-key: ${{ inputs.private-key }}
-        configure-git: true
+        configure-git: false
         default-to-github-token: false
 
     - name: Checkout default branch
@@ -100,6 +100,37 @@ runs:
       env:
         GH_TOKEN: ${{ steps.app-token.outputs.token }}
 
+    - name: Debug Approve output
+      shell: bash
+      run: |
+        echo "${{ steps.check-changeset.outputs.highest_version }}"
+        echo "${{ steps.check-pr.outputs.pr_number }}"
+        echo "${{ steps.approve-app-token.outputs.token }}"
+
+    - id: approve-app-token
+      name: Create token for approving PR
+      uses: kt-workflows/actions/create-github-app-token@main
+      if: |
+        inputs.approve-app-id != '' && inputs.approve-private-key != ''
+      with:
+        app-id: ${{ inputs.approve-app-id }}
+        private-key: ${{ inputs.approve-private-key }}
+        default-to-github-token: false
+        configure-git: false
+
+    - name: Approve Changeset Release PR
+      if: >-
+        steps.approve-app-token.outputs.token != '' &&
+        steps.check-changeset.outputs.highest_version == 'patch' &&
+        steps.check-pr.outputs.pr_number != ''
+      shell: bash
+      env:
+        PR_NUMBER: ${{ steps.check-pr.outputs.pr_number }}
+        GH_TOKEN: ${{ steps.approve-app-token.outputs.token }}
+      run: |
+        echo "Approving PR #$PR_NUMBER"
+        gh pr review $PR_NUMBER --approve --body "Approved! Servus!"
+
     - name: Enable auto-merge for Changeset Release PR
       if: >-
         steps.check-changeset.outputs.highest_version == 'patch' &&
@@ -111,23 +142,3 @@ runs:
         gh pr merge $pr_number --auto --squash --delete-branch
       env:
         GH_TOKEN: ${{ steps.app-token.outputs.token }}
-
-    - id: approve-app-token
-      uses: kt-workflows/actions/create-github-app-token@main
-      if: |
-        inputs.approve-app-id != '' && inputs.approve-private-key != ''
-      with:
-        app-id: ${{ inputs.approve-app-id }}
-        private-key: ${{ inputs.approve-private-key }}
-        default-to-github-token: false
-        configure-git: false
-
-    - if: >-
-        steps.approve-app-token.outputs.token != '' &&
-        steps.check-changeset.outputs.highest_version == 'patch' &&
-        steps.check-pr.outputs.pr_number != ''
-      shell: bash
-      env:
-        PR_NUMBER: ${{ steps.check-pr.outputs.pr_number }}
-        GH_TOKEN: ${{ steps.approve-app-token.outputs.token }}
-      run: gh pr review $PR_NUMBER --approve --body "Approved! Servus!"
