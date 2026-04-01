@@ -97,7 +97,9 @@ runs:
       env:
         PR_URL: ${{github.event.pull_request.html_url}}
         GH_TOKEN: ${{ steps.approve-app-token.outputs.token }}
-      run: gh pr review --approve --body "Approved! Servus!" "$PR_URL"
+      run: |
+        echo "Approving PR at $PR_URL"
+        gh pr review --approve --body "Approved! Servus!" "$PR_URL"
 
     - if: |
         (steps.metadata.outputs.update-type == 'version-update:semver-minor' ||
@@ -106,4 +108,6 @@ runs:
       env:
         PR_URL: ${{github.event.pull_request.html_url}}
         GH_TOKEN: ${{ steps.app-token.outputs.token }}
-      run: gh pr merge --auto --squash "$PR_URL"
+      run: |
+        echo "Merging PR at $PR_URL"
+        gh pr merge --auto --squash "$PR_URL"
