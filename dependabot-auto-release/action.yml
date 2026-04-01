@@ -101,13 +101,6 @@ runs:
       env:
         GH_TOKEN: ${{ steps.app-token.outputs.token }}
 
-    - name: Debug Approve output
-      shell: bash
-      run: |
-        echo "${{ steps.check-changeset.outputs.highest_version }}"
-        echo "${{ steps.check-pr.outputs.pr_number }}"
-        echo "${{ steps.approve-app-token.outputs.token }}"
-
     - id: approve-app-token
       name: Create token for approving PR
       uses: kt-workflows/actions/create-github-app-token@main
