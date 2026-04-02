@@ -14,6 +14,10 @@ inputs:
   approve-private-key:
     description: 'GitHub App private key used to create a token and approve the PR'
     required: false
+  approve-message:
+    description: 'Approval message for the PR review'
+    required: false
+    default: 'Approved! Servus!'
 
 runs:
   using: 'composite'
@@ -138,9 +142,10 @@ runs:
       env:
         PR_NUMBER: ${{ steps.check-pr.outputs.pr_number }}
         GH_TOKEN: ${{ steps.approve-app-token.outputs.token }}
+        APPROVE_MESSAGE: ${{ inputs.approve-message }}
       run: |
         echo "Approving PR #$PR_NUMBER"
-        gh pr review $PR_NUMBER --approve --body "Approved! Servus!"
+        gh pr review $PR_NUMBER --approve --body "$APPROVE_MESSAGE"
 
     - name: Enable auto-merge for Changeset Release PR
       if: >-
