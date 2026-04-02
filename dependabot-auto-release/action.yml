@@ -17,7 +17,7 @@ inputs:
   approve-message:
     description: 'Approval message for the PR review'
     required: false
-    default: 'Approved! Servus!'
+    default: 'Approved! Servus! 🤖'
 
 runs:
   using: 'composite'
