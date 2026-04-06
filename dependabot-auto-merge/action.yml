@@ -10,6 +10,10 @@ inputs:
     description: 'GitHub App ID used to create a token and approve the PR'
   approve-private-key:
     description: 'GitHub App private key used to create a token and approve the PR'
+  approve-message:
+    description: 'Approval message for the PR review'
+    required: false
+    default: 'Approved! Servus! 🤖'
   generate-changesets:
     description: 'Generate changesets for the updated dependencies'
     default: 'true'
@@ -97,9 +101,10 @@ runs:
       env:
         PR_URL: ${{github.event.pull_request.html_url}}
         GH_TOKEN: ${{ steps.approve-app-token.outputs.token }}
+        APPROVE_MESSAGE: ${{ inputs.approve-message }}
       run: |
         echo "Approving PR at $PR_URL"
-        gh pr review --approve --body "Approved! Servus!" "$PR_URL"
+        gh pr review --approve --body "$APPROVE_MESSAGE" "$PR_URL"
 
     - if: |
         (steps.metadata.outputs.update-type == 'version-update:semver-minor' ||
