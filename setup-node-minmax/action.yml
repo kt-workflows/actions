@@ -52,23 +52,24 @@ runs:
   steps:
     - id: select-node-version
       shell: bash
-      # check inputs.node-version, if provided, use it
-      # if not, check inputs.matrix-node-version, if provided, use it
       run: |
         if [[ -n "${{ inputs.node-version }}" ]]; then
-          echo "version=${{ inputs.node-version }}" >> "$GITHUB_OUTPUT"
-          echo "Node version provided: ${{ inputs.node-version }}"
+          selected_version='${{ inputs.node-version }}'
+          echo "version=$selected_version" >> "$GITHUB_OUTPUT"
+          echo "Node version provided: $selected_version"
         elif [[ -n "${{ inputs.matrix-node-version }}" ]]; then
           echo "Node version array provided: ${{ inputs.matrix-node-version }}"
           if [[ "${{ inputs.matrix-node-version-earliest }}" == "true" ]]; then
-            echo "version=$(echo '${{ inputs.matrix-node-version }}' | jq -r '.[] | tostring' | sort -V | head -n 1)" >> "$GITHUB_OUTPUT"
-            echo "Earliest version selected"
+            selected_version="$(echo '${{ inputs.matrix-node-version }}' | jq -r '.[] | tostring' | sort -V | head -n 1)"
+            echo "Earliest version selected: $selected_version"
           else
-            echo "version=$(echo '${{ inputs.matrix-node-version }}' | jq -r '.[] | tostring' | sort -V | tail -n 1)" >> "$GITHUB_OUTPUT"
-            echo "Latest version selected"
+            selected_version="$(echo '${{ inputs.matrix-node-version }}' | jq -r '.[] | tostring' | sort -V | tail -n 1)"
+            echo "Latest version selected: $selected_version"
           fi
+
+          echo "version=$selected_version" >> "$GITHUB_OUTPUT"
         else
-          echo "No node version provided default will be used"
+          echo "No node version provided, default will be used"
         fi
 
     - id: setup-node
