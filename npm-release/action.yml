@@ -6,6 +6,8 @@ inputs:
     description: 'GitHub App ID used to create a token and submit changes'
   private-key:
     description: 'GitHub App private key used to create a token and submit changes'
+  npm-token:
+    description: 'NPM token used to publish the package (fallback if trusted publishing fails)'
   node-version:
     description: 'Concrete Node.js version to use'
   matrix-node-version:
@@ -78,10 +80,10 @@ runs:
         fi
         echo "Final npm: $(npm -v)"
 
+    # Step 1: Try trusted publishing first
     - id: changesets
       uses: changesets/action@v1
       with:
-        # This expects you to have a script called release which does a build for your packages and calls changeset publish
         publish: ${{ inputs.publish-script }}
         version: ${{ inputs.version-script }}
       env:
@@ -89,8 +91,20 @@ runs:
         NPM_CONFIG_PROVENANCE: true
       continue-on-error: true
 
+    # Step 2: Fallback to npm token if trusted publishing failed
+    - id: changesets-fallback
+      if: ${{ steps.changesets.outcome == 'failure' }}
+      uses: changesets/action@v1
+      with:
+        publish: ${{ inputs.publish-script }}
+        version: ${{ inputs.version-script }}
+      env:
+        GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+        NPM_CONFIG_PROVENANCE: true
+        NPM_TOKEN: ${{ inputs.npm-token }}
+
     # Get the branch of the pull request from its number
-    - if: ${{ steps.changesets.outputs.publish != 'true' && steps.changesets.outputs.hasChangesets == 'true' && steps.changesets.outputs.pullRequestNumber != '' }}
+    - if: ${{ steps.changesets.outputs.publish != 'true' && steps.changesets-fallback.outputs.publish != 'true' && steps.changesets.outputs.hasChangesets == 'true' && steps.changesets.outputs.pullRequestNumber != '' }}
       id: release-branch
       shell: bash
       run: |
