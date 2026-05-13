@@ -12,6 +12,9 @@ inputs:
     description: 'Concrete Node.js version to use'
   matrix-node-version:
     description: 'Node.js versions to use, json array like in matrix.node-version'
+  matrix-node-version-earliest:
+    description: 'Set this option if you want the action to select the earliest available version that satisfies the version spec.'
+    default: 'false'
   install-script:
     description: 'Install script to run'
     default: npm ci
@@ -62,7 +65,7 @@ runs:
       with:
         node-version: ${{ inputs.node-version }}
         matrix-node-version: ${{ inputs.matrix-node-version }}
-        matrix-node-version-earliest: true
+        matrix-node-version-earliest: ${{ inputs.matrix-node-version-earliest }}
         skip-npm-setup: ${{ inputs.skip-npm-setup }}
         install-script: ${{ inputs.install-script }}
         run-script: ${{ inputs.build-script }}
