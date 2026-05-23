@@ -1,0 +1,82 @@
+diff --git a/npm-ci-check/action.yml b/npm-ci-check/action.yml
+index 46d1145..dc2f652 100644
+--- a/npm-ci-check/action.yml
++++ b/npm-ci-check/action.yml
+@@ -39,11 +39,15 @@ inputs:
+   working-directory:
+     description: 'The working directory which contains the **/package-lock.json files'
+     default: '.'
++  checkout:
++    description: 'Whether to checkout the repository before running the script. Set this to false if you have already checked out the repository in a previous step and want to avoid redundant checkout.'
++    default: 'true'
+ 
+ runs:
+   using: 'composite'
+   steps:
+     - uses: actions/checkout@v6
++      if: ${{ inputs.checkout == 'true' }}
+ 
+     - uses: kt-workflows/actions/npm-run-script@main
+       with:
+diff --git a/npm-ci-test/action.yml b/npm-ci-test/action.yml
+index 2864d09..657bdf2 100644
+--- a/npm-ci-test/action.yml
++++ b/npm-ci-test/action.yml
+@@ -30,11 +30,15 @@ inputs:
+   working-directory:
+     description: 'The working directory which contains the **/package-lock.json files'
+     default: '.'
++  checkout:
++    description: 'Whether to checkout the repository before running the script. Set this to false if you have already checked out the repository in a previous step and want to avoid redundant checkout.'
++    default: 'true'
+ 
+ runs:
+   using: 'composite'
+   steps:
+     - uses: actions/checkout@v6
++      if: ${{ inputs.checkout == 'true' }}
+ 
+     - uses: kt-workflows/actions/npm-run-script@main
+       with:
+diff --git a/npm-release/action.yml b/npm-release/action.yml
+index 29d0e38..0f45dc9 100644
+--- a/npm-release/action.yml
++++ b/npm-release/action.yml
+@@ -38,6 +38,9 @@ inputs:
+   cache-reset:
+     description: 'Delete the cache if it exists to cache the new one.'
+     default: 'false'
++  checkout:
++    description: 'Whether to checkout the repository before running the script. Set this to false if you have already checked out the repository in a previous step and want to avoid redundant checkout.'
++    default: 'true'
+ 
+ outputs:
+   release-branch:
+@@ -56,6 +59,7 @@ runs:
+         default-to-github-token: true
+ 
+     - uses: actions/checkout@v6
++      if: ${{ inputs.checkout == 'true' }}
+       with:
+         # This makes Actions fetch all Git history so that Changesets can generate changelogs with the correct commits
+         fetch-depth: 0
+diff --git a/scripts/git-diff.sh b/scripts/git-diff.sh
+new file mode 100755
+index 0000000..80e04f1
+--- /dev/null
++++ b/scripts/git-diff.sh
+@@ -0,0 +1,14 @@
++#!/usr/bin/env bash
++set -euo pipefail
++
++ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
++cd "$ROOT_DIR"
++
++ARTIFACTS_DIR="$ROOT_DIR/artifacts"
++mkdir -p "$ARTIFACTS_DIR"
++TIMESTAMP="$(date +"%Y%m%d-%H%M%S")"
++OUTPUT_NAME="$ARTIFACTS_DIR/git-${TIMESTAMP}.diff"
++
++git add -N .
++git diff . ':(exclude)package-lock.json' > "$OUTPUT_NAME"
++open "$ARTIFACTS_DIR"

@@ -38,6 +38,9 @@ inputs:
   cache-reset:
     description: 'Delete the cache if it exists to cache the new one.'
     default: 'false'
+  checkout:
+    description: 'Whether to checkout the repository before running the script. Set this to false if you have already checked out the repository in a previous step and want to avoid redundant checkout.'
+    default: 'true'
 
 outputs:
   release-branch:
@@ -56,6 +59,7 @@ runs:
         default-to-github-token: true
 
     - uses: actions/checkout@v6
+      if: ${{ inputs.checkout == 'true' }}
       with:
         # This makes Actions fetch all Git history so that Changesets can generate changelogs with the correct commits
         fetch-depth: 0

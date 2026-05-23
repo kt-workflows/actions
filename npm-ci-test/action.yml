@@ -30,11 +30,15 @@ inputs:
   working-directory:
     description: 'The working directory which contains the **/package-lock.json files'
     default: '.'
+  checkout:
+    description: 'Whether to checkout the repository before running the script. Set this to false if you have already checked out the repository in a previous step and want to avoid redundant checkout.'
+    default: 'true'
 
 runs:
   using: 'composite'
   steps:
     - uses: actions/checkout@v6
+      if: ${{ inputs.checkout == 'true' }}
 
     - uses: kt-workflows/actions/npm-run-script@main
       with:
