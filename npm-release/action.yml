@@ -41,14 +41,17 @@ inputs:
   checkout:
     description: 'Whether to checkout the repository before running the script. Set this to false if you have already checked out the repository in a previous step and want to avoid redundant checkout.'
     default: 'true'
+  working-directory:
+    description: 'The working directory which contains the **/package-lock.json files'
+    default: '.'
 
 outputs:
   release-branch:
     description: 'Branch name of the Changesets release PR'
     value: ${{ steps.release-branch.outputs.branch }}
-  publish:
-    description: 'Whether a publish should be performed'
-    value: ${{ steps.changesets.outputs.publish == 'true' || steps.changesets-fallback.outputs.publish == 'true' }}
+  published:
+    description: 'Whether published or not'
+    value: ${{ steps.changesets.outputs.published == 'true' || steps.changesets-fallback.outputs.published == 'true' }}
 
 runs:
   using: 'composite'
@@ -78,9 +81,11 @@ runs:
         run-script: ${{ inputs.build-script }}
         cache-additional-path: ${{ inputs.cache-additional-path }}
         cache-reset: ${{ inputs.cache-reset }}
+        working-directory: ${{ inputs.working-directory }}
 
     # Ensure npm has recent trusted publishing fixes without downgrading future npm majors
     - shell: bash
+      working-directory: ${{ inputs.working-directory }}
       run: |
         current="$(npm -v)"
         echo "Current npm: $current"
@@ -101,6 +106,7 @@ runs:
       with:
         publish: ${{ inputs.publish-script }}
         version: ${{ inputs.version-script }}
+        cwd: ${{ inputs.working-directory }}
       env:
         GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
         NPM_CONFIG_PROVENANCE: true
@@ -113,15 +119,17 @@ runs:
       with:
         publish: ${{ inputs.publish-script }}
         version: ${{ inputs.version-script }}
+        cwd: ${{ inputs.working-directory }}
       env:
         GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
         NPM_CONFIG_PROVENANCE: true
         NPM_TOKEN: ${{ inputs.npm-token }}
 
     # Get the branch of the pull request from its number
-    - if: ${{ steps.changesets.outputs.publish != 'true' && steps.changesets-fallback.outputs.publish != 'true' && steps.changesets.outputs.hasChangesets == 'true' && steps.changesets.outputs.pullRequestNumber != '' }}
+    - if: ${{ steps.changesets.outputs.published != 'true' && steps.changesets-fallback.outputs.published != 'true' && steps.changesets.outputs.hasChangesets == 'true' && steps.changesets.outputs.pullRequestNumber != '' }}
       id: release-branch
       shell: bash
+      working-directory: ${{ inputs.working-directory }}
       run: |
         pr_number=${{ steps.changesets.outputs.pullRequestNumber }}
         pr_branch=$(gh pr view $pr_number --json headRefName --jq '.headRefName')
