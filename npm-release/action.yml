@@ -46,6 +46,9 @@ outputs:
   release-branch:
     description: 'Branch name of the Changesets release PR'
     value: ${{ steps.release-branch.outputs.branch }}
+  publish:
+    description: 'Whether a publish should be performed'
+    value: ${{ steps.changesets.outputs.publish == 'true' || steps.changesets-fallback.outputs.publish == 'true' }}
 
 runs:
   using: 'composite'
