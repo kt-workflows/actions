@@ -71,9 +71,9 @@ runs:
           # replace / with - in DEP_NAME
           DEP_NAME_CHANGESET=${DEP_NAME//\//-}
           if [ "$PKG_DIR" = "." ]; then
-            CHANGESET_FILE="${{ github.event.number }}-${PKG_NAME}-${DEP_NAME_CHANGESET}.md"
+            CHANGESET_FILE="~${{ github.event.number }}-${PKG_NAME}-${DEP_NAME_CHANGESET}.md"
           else
-            CHANGESET_FILE="${{ github.event.number }}-${PKG_DIR}-${PKG_NAME}-${DEP_NAME_CHANGESET}.md"
+            CHANGESET_FILE="~${{ github.event.number }}-${PKG_DIR}-${PKG_NAME}-${DEP_NAME_CHANGESET}.md"
           fi
           # replace '/' with
           CHANGESET_FILE=${CHANGESET_FILE//\//-}
