@@ -102,26 +102,28 @@ runs:
 
     # Step 1: Try trusted publishing first
     - id: changesets
-      uses: changesets/action@v1
+      uses: changesets/action@v2
       with:
-        publish: ${{ inputs.publish-script }}
-        version: ${{ inputs.version-script }}
+        publish-script: ${{ inputs.publish-script }}
+        version-script: ${{ inputs.version-script }}
+        create-github-releases: true
         cwd: ${{ inputs.working-directory }}
+        github-token: ${{ steps.app-token.outputs.token }}
       env:
-        GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
         NPM_CONFIG_PROVENANCE: true
       continue-on-error: true
 
     # Step 2: Fallback to npm token if trusted publishing failed
     - id: changesets-fallback
       if: ${{ steps.changesets.outcome == 'failure' }}
-      uses: changesets/action@v1
+      uses: changesets/action@v2
       with:
-        publish: ${{ inputs.publish-script }}
-        version: ${{ inputs.version-script }}
+        publish-script: ${{ inputs.publish-script }}
+        version-script: ${{ inputs.version-script }}
+        create-github-releases: true
         cwd: ${{ inputs.working-directory }}
+        github-token: ${{ steps.app-token.outputs.token }}
       env:
-        GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
         NPM_CONFIG_PROVENANCE: true
         NPM_TOKEN: ${{ inputs.npm-token }}
 
