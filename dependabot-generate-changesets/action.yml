@@ -1,22 +1,15 @@
 name: Generate changesets for Dependabot PRs
-description: Add/update changeset files for Dependabot PR. This action is used in the context of a pull request created by Dependabot. It creates a changeset files in the `.changeset` directory.
+description: Add/update changeset files for Dependabot PR. Attributes by changed package.json manifests — one changeset per PR listing every affected workspace package as patch.
 
 inputs:
   token:
     required: false
     description: 'GitHub token'
-  updated-dependencies-json:
+  pr-number:
     required: true
-    description: 'JSON string with updated dependencies from dependabot/fetch-metadata action'
-  version-update-map:
-    required: false
-    description: 'Map version updates from dependabot/fetch-metadata action to changeset types'
-    default: '{"semver-patch": "patch", "semver-minor": "patch", "semver-major": "patch"}'
+    description: 'Pull request number'
 
 outputs:
-  updated-dependencies-json:
-    description: 'Json array of updated dependencies'
-    value: ${{ steps.metadata.outputs.updated-dependencies-json }}
   changesets-json:
     description: 'Json array of changeset files created or updated'
     value: ${{ steps.generate-changesets.outputs.changesets-json }}
@@ -25,73 +18,57 @@ runs:
   using: 'composite'
   steps:
     - id: generate-changesets
-      if: steps.find-comment.outputs.comment-id == ''
       shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.token || github.token }}
       run: |
-        declare changesets_json="[]"
-        # loop through updated-dependencies-json array
-        for dep in $(echo ${{ inputs.updated-dependencies-json }} | jq -r '.[] | @base64'); do
-          _jq() {
-            echo ${dep} | base64 --decode | jq -r ${1}
+        set -euo pipefail
+        PR="${{ inputs.pr-number }}"
+        OWNER_REPO="${{ github.repository }}"
+        FILE=".changeset/~dependabot-pr-${PR}.md"
+
+        # 1. Full pagination — gh pr view --json files caps at 100
+        mapfile -t CHANGED < <(gh api --paginate "repos/${OWNER_REPO}/pulls/${PR}/files" --jq '.[].filename')
+
+        # 2. Discover project packages from root package.json
+        mapfile -t MEMBERS < <(node -e '
+          const fs=require("fs"), path=require("path");
+          const root=JSON.parse(fs.readFileSync("package.json","utf8"));
+          const ws=root.workspaces?.packages||root.workspaces;
+          const out=new Set();
+          if (!ws || ws.length===0) {
+            out.add(".");
+          } else for (const g of ws) {
+            if (g.endsWith("/*")) {
+              const base=g.slice(0,-2);
+              if (fs.existsSync(base)) for (const d of fs.readdirSync(base))
+                if (fs.existsSync(path.join(base,d,"package.json"))) out.add(path.join(base,d));
+            } else if (fs.existsSync(path.join(g,"package.json"))) out.add(g);
           }
-          UPDATE_PKG_DIR=$(_jq '.directory')
-          UPDATE_PKG_DIR_PREP=$UPDATE_PKG_DIR
-          UPDATE_PKG_DIR_PREP=${UPDATE_PKG_DIR_PREP#./}
-          UPDATE_PKG_DIR_PREP=${UPDATE_PKG_DIR_PREP#/}
-          if [ -z "$UPDATE_PKG_DIR_PREP" ]; then
-            # if PKG_DIR is empty, set it to the current directory
-            UPDATE_PKG_DIR_PREP="."
-          fi
-          # Loop over the workspaces array, find matching workspace
-          # If not found, set PKG_DIR to the current directory
-          # This is to support monorepos with workspaces
-          # and to support packages that are not in a workspace
-          FOUND_PKG_DIR="."
-          # check that UPDATE_PKG_DIR_PREP != "."
-          if [[ "$UPDATE_PKG_DIR_PREP" != "." ]]; then
-            for workspace in $(jq -r '.workspaces[]' ./package.json); do
-              # Check if the workspace matches the UPDATE_PKG_DIR
-              if [[ "$UPDATE_PKG_DIR_PREP" == "$workspace" || "./$UPDATE_PKG_DIR_PREP" == "$workspace" ]]; then
-                # If it matches, set FOUND_PKG_DIR to the workspace
-                FOUND_PKG_DIR=$workspace
-                break
-              fi
-            done
-          fi
-          PKG_DIR=$FOUND_PKG_DIR
-          PKG_JSON="$PKG_DIR/package.json"
-          PKG_NAME=$(jq -r '.name' $PKG_JSON)
-          DEP_NAME=$(_jq '.dependencyName')
-          DEP_PREV_VERSION=$(_jq '.prevVersion')
-          DEP_NEW_VERSION=$(_jq '.newVersion')
-          DEP_DEPENDENCY_TYPE=$(_jq '.dependencyType')
-          DEP_UPDATE_TYPE=$(_jq '.updateType') 
-          DEP_SEMVER_TYPE=$(echo $DEP_UPDATE_TYPE | cut -d':' -f2)
-          DEP_CHANGESET_TYPE=$(echo ${{ tojson(inputs.version-update-map) }} | jq -r --arg semver_type "$DEP_SEMVER_TYPE" '.[$semver_type]')
-          # replace / with - in DEP_NAME
-          DEP_NAME_CHANGESET=${DEP_NAME//\//-}
-          if [ "$PKG_DIR" = "." ]; then
-            CHANGESET_FILE="~${{ github.event.number }}-${PKG_NAME}-${DEP_NAME_CHANGESET}.md"
-          else
-            CHANGESET_FILE="~${{ github.event.number }}-${PKG_DIR}-${PKG_NAME}-${DEP_NAME_CHANGESET}.md"
-          fi
-          # replace '/' with
-          CHANGESET_FILE=${CHANGESET_FILE//\//-}
-          # add ./.changeset/ prefix
-          CHANGESET_FILE="./.changeset/$CHANGESET_FILE"
-          # Always overwrite changeset file in the beginning - '>' will create the file if it doesn't exist
-          echo "---" > $CHANGESET_FILE
-          echo "'$PKG_NAME': $DEP_CHANGESET_TYPE" >> $CHANGESET_FILE
-          echo "---" >> $CHANGESET_FILE
-          echo "" >> $CHANGESET_FILE
-          if [ -n "$DEP_PREV_VERSION" ] && [ -n "$DEP_NEW_VERSION" ]; then
-            UPDATE_STRING="dependabot: directory '$UPDATE_PKG_DIR', update $DEP_NAME from $DEP_PREV_VERSION to $DEP_NEW_VERSION"
-          else
-            UPDATE_STRING="dependabot: directory '$UPDATE_PKG_DIR', update $DEP_NAME"
-          fi
-          echo "$UPDATE_STRING" >> $CHANGESET_FILE
-          # append output - json array of created or updated changeset files
-          changesets_json=$(echo $changesets_json | jq --arg file $CHANGESET_FILE '. + [$file]')
+          process.stdout.write([...out].join("\n"));
+        ')
+
+        # 3. Collect affected packages — no private filter
+        AFFECTED=()
+        for m in "${MEMBERS[@]}"; do
+          manifest="$m/package.json"; manifest="${manifest#./}"
+          printf '%s\n' "${CHANGED[@]}" | grep -qxF "$manifest" || continue
+          AFFECTED+=("$(jq -r '.name' "$manifest")")
         done
-        changesets_json=$(echo $changesets_json | jq -c '.')
-        echo "changesets-json=$changesets_json" >> $GITHUB_OUTPUT
+
+        # 4. Nothing changed → delete stale changeset, emit none
+        if [ ${#AFFECTED[@]} -eq 0 ]; then
+          rm -f "$FILE"
+          echo "changesets-json=[]" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+
+        # 5. One changeset for all affected packages
+        {
+          echo "---"
+          for n in "${AFFECTED[@]}"; do echo "\"$n\": patch"; done
+          echo "---"
+          echo
+          echo "dependabot: dependency updates for PR #${PR}"
+        } > "$FILE"
+        echo "changesets-json=[\"$FILE\"]" >> "$GITHUB_OUTPUT"
