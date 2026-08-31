@@ -72,4 +72,3 @@ runs:
           echo "dependabot: dependency updates for PR #${PR}"
         } > "$FILE"
         echo "changesets-json=[\"$FILE\"]" >> "$GITHUB_OUTPUT"
-        npx --yes prettier --write "$FILE"
