@@ -66,7 +66,7 @@ runs:
         # 5. One changeset for all affected packages
         {
           echo "---"
-          for n in "${AFFECTED[@]}"; do echo "\"$n\": patch"; done
+          for n in "${AFFECTED[@]}"; do echo "'$n': patch"; done
           echo "---"
           echo
           echo "dependabot: dependency updates for PR #${PR}"
