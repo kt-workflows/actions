@@ -1,0 +1,90 @@
+name: NPM CI Snyk
+description: Run Snyk dependency scan. Skips gracefully if token is not set.
+
+inputs:
+  snyk-token:
+    required: false
+    description: 'Snyk token'
+  fail-on-empty-token:
+    description: 'Fail if the token is empty.'
+    default: 'true'
+  command:
+    description: 'Snyk command to run.'
+    default: 'test'
+  args:
+    description: 'Additional snyk arguments.'
+    default: ''
+  node-version:
+    description: 'Version Spec to use. Examples: 18, 18.x, 18.0.0, 18.0.x, 18.0.0-x, 18.0.0-x64.'
+    required: false
+  matrix-node-version:
+    description: 'Version Spec array, i.e. from matrix.node-version. Latest will be selected from this array and setup-node will be run with the selected version.'
+    required: false
+  matrix-node-version-earliest:
+    description: 'Set this option if you want the action to select for the earliest available version that satisfies the version spec.'
+    default: 'false'
+  install-script:
+    description: 'Bash script to run to install dependencies.'
+    default: 'npm ci'
+  skip-npm-setup:
+    description: 'Skip Node.js setup and npm installation. This is useful if you have already set up Node.js environment in a previous step and want to avoid redundant setup.'
+    default: 'false'
+  cache-additional-path:
+    description: 'Additional paths to cache. This is a multi-line list of paths.'
+    default: |-
+      /home/runner/.cache/Cypress
+      /home/runner/.cache/ms-playwright
+  cache-reset:
+    description: 'Delete the cache if it exists to cache the new one.'
+    default: 'false'
+  cache-dependency-path:
+    description: 'Used to specify the path to a dependency file: package-lock.json, yarn.lock, etc. Supports wildcards or a list of file names for caching multiple dependencies.'
+    default: '**/package-lock.json'
+  working-directory:
+    description: 'The working directory which contains the **/package-lock.json files'
+    default: '.'
+  checkout:
+    description: 'Whether to checkout the repository before running the Snyk scan.'
+    default: 'true'
+
+runs:
+  using: 'composite'
+  steps:
+    - id: do-snyk
+      shell: bash
+      run: |
+        if [[ -z "${{ inputs.snyk-token }}" ]]; then
+          echo "snyk-token is not set. No Snyk scan will be performed."
+          if [[ "${{ inputs.fail-on-empty-token }}" == "true" ]]; then
+            echo "Failing because snyk-token is not set"
+            exit 1
+          fi
+          echo "result=false" >> "$GITHUB_OUTPUT"
+        else
+          echo "snyk-token is set. Performing Snyk scan."
+          echo "result=true" >> "$GITHUB_OUTPUT"
+        fi
+
+    - uses: actions/checkout@v6
+      if: steps.do-snyk.outputs.result == 'true' && inputs.checkout == 'true'
+
+    - uses: kt-workflows/actions/npm-run-script@main
+      if: steps.do-snyk.outputs.result == 'true'
+      with:
+        node-version: ${{ inputs.node-version }}
+        matrix-node-version: ${{ inputs.matrix-node-version }}
+        matrix-node-version-earliest: ${{ inputs.matrix-node-version-earliest }}
+        skip-npm-setup: ${{ inputs.skip-npm-setup }}
+        install-script: ${{ inputs.install-script }}
+        cache-additional-path: ${{ inputs.cache-additional-path }}
+        cache-reset: ${{ inputs.cache-reset }}
+        cache-dependency-path: ${{ inputs.cache-dependency-path }}
+        working-directory: ${{ inputs.working-directory }}
+
+    - uses: snyk/actions/node@master
+      if: steps.do-snyk.outputs.result == 'true'
+      env:
+        SNYK_TOKEN: ${{ inputs.snyk-token }}
+      with:
+        command: ${{ inputs.command }}
+        args: ${{ inputs.args }}
