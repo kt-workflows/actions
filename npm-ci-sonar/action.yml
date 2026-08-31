@@ -36,6 +36,9 @@ inputs:
   working-directory:
     description: 'The working directory which contains the **/package-lock.json files'
     default: '.'
+  project-base-dir:
+    description: 'Base directory for the SonarQube scan.'
+    default: '.'
   sonar-token:
     description: 'SonarQube token to use for authentication.'
   fail-on-empty-token:
@@ -84,3 +87,5 @@ runs:
       if: steps.do-sonar.outputs.result == 'true'
       env:
         SONAR_TOKEN: ${{ inputs.sonar-token }}
+      with:
+        projectBaseDir: ${{ inputs.project-base-dir }}
