@@ -47,7 +47,7 @@ runs:
 
     - id: metadata
       name: Fetch metadata about the updated dependencies
-      uses: dependabot/fetch-metadata@v2
+      uses: dependabot/fetch-metadata@v3
       with:
         github-token: ${{ steps.app-token.outputs.token }}
 
