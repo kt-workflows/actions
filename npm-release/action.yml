@@ -113,9 +113,26 @@ runs:
         NPM_CONFIG_PROVENANCE: true
       continue-on-error: true
 
-    # Step 2: Fallback to npm token if trusted publishing failed
+    # Do not retry if the primary action reports partial publication.
+    - if: ${{ steps.changesets.outcome == 'failure' && steps.changesets.outputs.published == 'true' }}
+      shell: bash
+      run: |
+        echo "::error::Changesets reported published packages before failing. Refusing to retry publication with the fallback token."
+        exit 1
+
+    # Step 2: Configure npm token auth only for the fallback attempt.
+    - id: npm-token-config
+      if: ${{ steps.changesets.outcome == 'failure' && steps.changesets.outputs.published != 'true' }}
+      shell: bash
+      run: |
+        umask 077
+        fallback_npmrc="$RUNNER_TEMP/npm-release-fallback.npmrc"
+        printf '%s\n' '//registry.npmjs.org/:_authToken=${NPM_TOKEN}' > "$fallback_npmrc"
+        printf 'NPM_CONFIG_USERCONFIG=%s\n' "$fallback_npmrc" >> "$GITHUB_ENV"
+
+    # Retry with the fallback npm token only when the primary action failed before reporting publication.
     - id: changesets-fallback
-      if: ${{ steps.changesets.outcome == 'failure' }}
+      if: ${{ steps.changesets.outcome == 'failure' && steps.changesets.outputs.published != 'true' }}
       uses: changesets/action@v2
       with:
         publish-script: ${{ inputs.publish-script }}
@@ -128,13 +145,19 @@ runs:
         NPM_TOKEN: ${{ inputs.npm-token }}
 
     # Get the branch of the pull request from its number
-    - if: ${{ steps.changesets.outputs.published != 'true' && steps.changesets-fallback.outputs.published != 'true' && steps.changesets.outputs.hasChangesets == 'true' && steps.changesets.outputs.pullRequestNumber != '' }}
+    - if: >-
+        ${{
+          steps.changesets.outputs.published != 'true' &&
+          steps.changesets-fallback.outputs.published != 'true' &&
+          (steps.changesets.outputs['has-changesets'] == 'true' || steps.changesets-fallback.outputs['has-changesets'] == 'true') &&
+          (steps.changesets.outputs['pr-number'] != '' || steps.changesets-fallback.outputs['pr-number'] != '')
+        }}
       id: release-branch
       shell: bash
       working-directory: ${{ inputs.working-directory }}
-      run: |
-        pr_number=${{ steps.changesets.outputs.pullRequestNumber }}
-        pr_branch=$(gh pr view $pr_number --json headRefName --jq '.headRefName')
-        echo "branch=$pr_branch" >> "$GITHUB_OUTPUT"
       env:
         GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        PR_NUMBER: ${{ steps.changesets-fallback.outputs['pr-number'] || steps.changesets.outputs['pr-number'] }}
+      run: |
+        pr_branch=$(gh pr view "$PR_NUMBER" --json headRefName --jq '.headRefName')
+        echo "branch=$pr_branch" >> "$GITHUB_OUTPUT"
